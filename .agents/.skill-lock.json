@@ -1,0 +1,80 @@
+{
+  "version": 3,
+  "skills": {
+    "find-skills": {
+      "source": "vercel-labs/skills",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/vercel-labs/skills.git",
+      "skillPath": "skills/find-skills/SKILL.md",
+      "skillFolderHash": "3013fdeb8a11b10b1eb795ec3ae8bfca38f7c26d",
+      "installedAt": "2026-03-28T19:27:34.417Z",
+      "updatedAt": "2026-03-28T19:27:34.417Z"
+    },
+    "kotlin-specialist": {
+      "source": "jeffallan/claude-skills",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/jeffallan/claude-skills.git",
+      "skillPath": "skills/kotlin-specialist/SKILL.md",
+      "skillFolderHash": "733e51208806c826438cbf19d120748e1b267dd9",
+      "installedAt": "2026-03-30T20:34:03.282Z",
+      "updatedAt": "2026-03-30T20:34:03.282Z"
+    },
+    "pdf": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/anthropics/skills.git",
+      "skillPath": "skills/pdf/SKILL.md",
+      "skillFolderHash": "6369f4649de69bd6857c9bc3b058a77206009238",
+      "pluginName": "document-skills",
+      "installedAt": "2026-04-17T20:55:56.055Z",
+      "updatedAt": "2026-04-17T20:55:56.055Z"
+    },
+    "mcp-builder": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/anthropics/skills.git",
+      "skillPath": "skills/mcp-builder/SKILL.md",
+      "skillFolderHash": "9173e2c2107aac82d4ca6c726d71e89d11760470",
+      "pluginName": "example-skills",
+      "installedAt": "2026-04-17T20:56:55.832Z",
+      "updatedAt": "2026-04-17T20:56:55.832Z"
+    },
+    "oracle-cloud": {
+      "source": "dauquangthanh/hanoi-rainbow",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/dauquangthanh/hanoi-rainbow.git",
+      "skillPath": "skills/oracle-cloud/SKILL.md",
+      "skillFolderHash": "9fe1db9b6c1e2300b7f67fe15b12b45def8379aa",
+      "installedAt": "2026-05-26T20:08:42.423Z",
+      "updatedAt": "2026-05-26T20:08:42.423Z"
+    },
+    "mobile-android-design": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/wshobson/agents.git",
+      "skillPath": "plugins/ui-design/skills/mobile-android-design/SKILL.md",
+      "skillFolderHash": "81dd2f7f2196d74f4937aeb649fc536398601c01",
+      "installedAt": "2026-06-03T19:22:32.746Z",
+      "updatedAt": "2026-06-03T19:22:32.746Z"
+    }
+  },
+  "dismissed": {
+    "findSkillsPrompt": true
+  },
+  "lastSelectedAgents": [
+    "amp",
+    "antigravity",
+    "antigravity-cli",
+    "cline",
+    "codex",
+    "cursor",
+    "deepagents",
+    "gemini-cli",
+    "github-copilot",
+    "kimi-code-cli",
+    "opencode",
+    "warp",
+    "zed",
+    "claude-code"
+  ]
+}
