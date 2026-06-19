@@ -52,6 +52,7 @@ android {
         release {
             manifestPlaceholders["appLabel"] = "@string/app_name"
             isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
