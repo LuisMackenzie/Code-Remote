@@ -15,5 +15,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "OC Remote"
+rootProject.name = "Code Remote"
 include(":app")

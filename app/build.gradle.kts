@@ -11,11 +11,11 @@ plugins {
 }
 
 android {
-    namespace = "dev.minios.ocremote"
+    namespace = "dev.minios.coderemote"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "dev.minios.ocremote"
+        applicationId = "dev.minios.coderemote"
         minSdk = 26
         targetSdk = 34
         versionCode = 20
