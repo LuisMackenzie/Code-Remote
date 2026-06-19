@@ -12,11 +12,11 @@
     kotlinx.serialization.KSerializer serializer(...);
 }
 
--keep,includedescriptorclasses class dev.minios.coderemote.**$$serializer { *; }
--keepclassmembers class dev.minios.coderemote.** {
+-keep,includedescriptorclasses class dev.mackenzie.coderemote.**$$serializer { *; }
+-keepclassmembers class dev.mackenzie.coderemote.** {
     *** Companion;
 }
--keepclasseswithmembers class dev.minios.coderemote.** {
+-keepclasseswithmembers class dev.mackenzie.coderemote.** {
     kotlinx.serialization.KSerializer serializer(...);
 }
 

@@ -3,7 +3,7 @@
     <string name="app_name">OC Remote</string>
     
     <!-- Home Screen -->
-    <string name="home_title">OC Remote</string>
+    <string name="home_title">Code Remote</string>
     <string name="home_add_server">Add Server</string>
     <string name="home_no_servers">No servers configured</string>
     <string name="home_server_health_good">Connected</string>

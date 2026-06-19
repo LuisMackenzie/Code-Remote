@@ -2,7 +2,7 @@
 <resources>
     <string name="app_name">OC Remote</string>
     <!-- Home Screen -->
-    <string name="home_title">OC Remote</string>
+    <string name="home_title">Code Remote</string>
     <string name="home_add_server">Agregar servidor</string>
     <string name="home_no_servers">No hay servidores configurados</string>
     <string name="home_server_health_good">Conectado</string>
