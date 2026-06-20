@@ -27,7 +27,6 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.net.URLDecoder
 import javax.inject.Inject
 
 private const val TAG = "SessionListViewModel"
@@ -67,21 +66,11 @@ class SessionListViewModel @Inject constructor(
     private val api: OpenCodeApi
 ) : ViewModel() {
 
-    val serverUrl: String = URLDecoder.decode(
-        savedStateHandle.get<String>("serverUrl") ?: "", "UTF-8"
-    )
-    private val username: String = URLDecoder.decode(
-        savedStateHandle.get<String>("username") ?: "", "UTF-8"
-    )
-    private val password: String = URLDecoder.decode(
-        savedStateHandle.get<String>("password") ?: "", "UTF-8"
-    )
-    val serverName: String = URLDecoder.decode(
-        savedStateHandle.get<String>("serverName") ?: "", "UTF-8"
-    )
-    val serverId: String = URLDecoder.decode(
-        savedStateHandle.get<String>("serverId") ?: "", "UTF-8"
-    )
+    val serverUrl: String = savedStateHandle.get<String>("serverUrl") ?: ""
+    private val username: String = savedStateHandle.get<String>("username") ?: ""
+    private val password: String = savedStateHandle.get<String>("password") ?: ""
+    val serverName: String = savedStateHandle.get<String>("serverName") ?: ""
+    val serverId: String = savedStateHandle.get<String>("serverId") ?: ""
 
     private val conn = ServerConnection.from(serverUrl, username, password.ifEmpty { null })
 

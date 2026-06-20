@@ -21,7 +21,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.net.URLDecoder
 import javax.inject.Inject
 
 private const val TAG = "ServerSettingsViewModel"
@@ -83,21 +82,11 @@ class ServerSettingsViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
-    private val serverUrl: String = URLDecoder.decode(
-        savedStateHandle.get<String>("serverUrl") ?: "", "UTF-8"
-    )
-    private val username: String = URLDecoder.decode(
-        savedStateHandle.get<String>("username") ?: "", "UTF-8"
-    )
-    private val password: String = URLDecoder.decode(
-        savedStateHandle.get<String>("password") ?: "", "UTF-8"
-    )
-    private val serverId: String = URLDecoder.decode(
-        savedStateHandle.get<String>("serverId") ?: "", "UTF-8"
-    )
-    private val serverName: String = URLDecoder.decode(
-        savedStateHandle.get<String>("serverName") ?: "", "UTF-8"
-    )
+    private val serverUrl: String = savedStateHandle.get<String>("serverUrl") ?: ""
+    private val username: String = savedStateHandle.get<String>("username") ?: ""
+    private val password: String = savedStateHandle.get<String>("password") ?: ""
+    private val serverId: String = savedStateHandle.get<String>("serverId") ?: ""
+    private val serverName: String = savedStateHandle.get<String>("serverName") ?: ""
 
     private val conn = ServerConnection.from(serverUrl, username, password.ifEmpty { null })
 
