@@ -48,65 +48,17 @@ import dev.mackenzie.coderemote.data.api.FileNode
 import dev.mackenzie.coderemote.domain.model.Project
 import dev.mackenzie.coderemote.domain.model.SessionStatus
 import dev.mackenzie.coderemote.R
+import dev.mackenzie.coderemote.ui.components.PulsingDotsIndicator
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
-import androidx.compose.animation.core.*
-import androidx.compose.ui.graphics.graphicsLayer
 
 @Composable
 private fun isAmoledTheme(): Boolean {
     val colors = MaterialTheme.colorScheme
     return colors.background == Color.Black && colors.surface == Color.Black
-}
-
-/** Pulsing dots loading indicator — 3 dots that scale up/down in sequence. */
-@Composable
-private fun PulsingDotsIndicator(
-    modifier: Modifier = Modifier,
-    dotSize: androidx.compose.ui.unit.Dp = 10.dp,
-    dotSpacing: androidx.compose.ui.unit.Dp = 8.dp,
-    color: Color = MaterialTheme.colorScheme.primary
-) {
-    val transition = rememberInfiniteTransition(label = "pulsing_dots")
-    val scales2 = (0..2).map { index ->
-        transition.animateFloat(
-            initialValue = 0.4f,
-            targetValue = 0.4f,
-            animationSpec = infiniteRepeatable(
-                animation = keyframes {
-                    durationMillis = 1200
-                    val offset = index * 150
-                    0.4f at 0 + offset
-                    1.0f at 300 + offset
-                    0.4f at 600 + offset
-                    0.4f at 1200
-                },
-                repeatMode = RepeatMode.Restart
-            ),
-            label = "dot_scale_$index"
-        )
-    }
-    Row(
-        modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(dotSpacing),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        scales2.forEach { scale ->
-            Box(
-                modifier = Modifier
-                    .size(dotSize)
-                    .graphicsLayer {
-                        scaleX = scale.value
-                        scaleY = scale.value
-                        alpha = 0.3f + 0.7f * ((scale.value - 0.4f) / 0.6f)
-                    }
-                    .background(color, CircleShape)
-            )
-        }
-    }
 }
 
 /**
