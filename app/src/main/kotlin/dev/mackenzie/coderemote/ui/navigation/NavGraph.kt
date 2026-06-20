@@ -21,11 +21,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navArgument
 import dev.mackenzie.coderemote.SessionDeepLink
 import dev.mackenzie.coderemote.data.repository.EventReducer
 import dev.mackenzie.coderemote.data.repository.ServerRepository
@@ -45,7 +43,6 @@ import dev.mackenzie.coderemote.R
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.firstOrNull
-import java.net.URLDecoder
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -97,7 +94,6 @@ fun NavGraph(
             if (currentRoute?.startsWith("chat") == true) {
                 val currentSessionId = navController.currentBackStackEntry
                     ?.arguments?.getString("sessionId")
-                    ?.let { URLDecoder.decode(it, "UTF-8") }
                 if (currentSessionId != null) {
                     Log.i(TAG, "Already in ChatScreen for session $currentSessionId, targeting it directly")
                     pendingShareSessionId = currentSessionId
@@ -186,7 +182,6 @@ fun NavGraph(
                     val currentSessionId = navController.currentBackStackEntry
                         ?.arguments
                         ?.getString("sessionId")
-                        ?.let { URLDecoder.decode(it, "UTF-8") }
 
                     Log.i(
                         TAG,
@@ -266,20 +261,14 @@ fun NavGraph(
         }
 
         composable(
-            route = "server_settings?serverUrl={serverUrl}&username={username}&password={password}&serverName={serverName}&serverId={serverId}",
-            arguments = listOf(
-                navArgument("serverUrl") { type = NavType.StringType },
-                navArgument("username") { type = NavType.StringType },
-                navArgument("password") { type = NavType.StringType },
-                navArgument("serverName") { type = NavType.StringType },
-                navArgument("serverId") { type = NavType.StringType },
-            )
+            route = Screen.ServerSettings.route,
+            arguments = Screen.ServerSettings.args
         ) {
-            val serverUrl = URLDecoder.decode(it.arguments?.getString("serverUrl") ?: "", "UTF-8")
-            val username = URLDecoder.decode(it.arguments?.getString("username") ?: "", "UTF-8")
-            val password = URLDecoder.decode(it.arguments?.getString("password") ?: "", "UTF-8")
-            val serverName = URLDecoder.decode(it.arguments?.getString("serverName") ?: "", "UTF-8")
-            val serverId = URLDecoder.decode(it.arguments?.getString("serverId") ?: "", "UTF-8")
+            val serverUrl = it.arguments?.getString("serverUrl") ?: ""
+            val username = it.arguments?.getString("username") ?: ""
+            val password = it.arguments?.getString("password") ?: ""
+            val serverName = it.arguments?.getString("serverName") ?: ""
+            val serverId = it.arguments?.getString("serverId") ?: ""
             ServerSettingsScreen(
                 onNavigateBack = { navController.popBackStack() },
                 onOpenProviders = {
@@ -308,14 +297,8 @@ fun NavGraph(
         }
 
         composable(
-            route = "server_providers?serverUrl={serverUrl}&username={username}&password={password}&serverName={serverName}&serverId={serverId}",
-            arguments = listOf(
-                navArgument("serverUrl") { type = NavType.StringType },
-                navArgument("username") { type = NavType.StringType },
-                navArgument("password") { type = NavType.StringType },
-                navArgument("serverName") { type = NavType.StringType },
-                navArgument("serverId") { type = NavType.StringType },
-            )
+            route = Screen.ServerProviders.route,
+            arguments = Screen.ServerProviders.args
         ) {
             ServerProvidersScreen(
                 onNavigateBack = { navController.popBackStack() }
@@ -323,14 +306,8 @@ fun NavGraph(
         }
 
         composable(
-            route = "server_model_filter?serverUrl={serverUrl}&username={username}&password={password}&serverName={serverName}&serverId={serverId}",
-            arguments = listOf(
-                navArgument("serverUrl") { type = NavType.StringType },
-                navArgument("username") { type = NavType.StringType },
-                navArgument("password") { type = NavType.StringType },
-                navArgument("serverName") { type = NavType.StringType },
-                navArgument("serverId") { type = NavType.StringType },
-            )
+            route = Screen.ServerModelFilter.route,
+            arguments = Screen.ServerModelFilter.args
         ) {
             ServerModelFilterScreen(
                 onNavigateBack = { navController.popBackStack() }
@@ -348,45 +325,14 @@ fun NavGraph(
         
         // ============ WebView Screen (legacy) ============
         composable(
-            route = "webview?serverUrl={serverUrl}&username={username}&password={password}&serverName={serverName}&initialPath={initialPath}",
-            arguments = listOf(
-                navArgument("serverUrl") { 
-                    type = NavType.StringType
-                    nullable = false
-                },
-                navArgument("username") { 
-                    type = NavType.StringType
-                    nullable = false
-                },
-                navArgument("password") { 
-                    type = NavType.StringType
-                    nullable = false
-                },
-                navArgument("serverName") { 
-                    type = NavType.StringType
-                    nullable = false
-                },
-                navArgument("initialPath") {
-                    type = NavType.StringType
-                    defaultValue = ""
-                }
-            )
+            route = Screen.WebView.route,
+            arguments = Screen.WebView.args
         ) { backStackEntry ->
-            val serverUrl = URLDecoder.decode(
-                backStackEntry.arguments?.getString("serverUrl") ?: "", "UTF-8"
-            )
-            val username = URLDecoder.decode(
-                backStackEntry.arguments?.getString("username") ?: "", "UTF-8"
-            )
-            val password = URLDecoder.decode(
-                backStackEntry.arguments?.getString("password") ?: "", "UTF-8"
-            )
-            val serverName = URLDecoder.decode(
-                backStackEntry.arguments?.getString("serverName") ?: "", "UTF-8"
-            )
-            val initialPath = URLDecoder.decode(
-                backStackEntry.arguments?.getString("initialPath") ?: "", "UTF-8"
-            )
+            val serverUrl = backStackEntry.arguments?.getString("serverUrl") ?: ""
+            val username = backStackEntry.arguments?.getString("username") ?: ""
+            val password = backStackEntry.arguments?.getString("password") ?: ""
+            val serverName = backStackEntry.arguments?.getString("serverName") ?: ""
+            val initialPath = backStackEntry.arguments?.getString("initialPath") ?: ""
             
             WebViewScreen(
                 serverUrl = serverUrl,
@@ -403,30 +349,14 @@ fun NavGraph(
         
         // ============ Session List Screen (native) ============
         composable(
-            route = "sessions?serverUrl={serverUrl}&username={username}&password={password}&serverName={serverName}&serverId={serverId}",
-            arguments = listOf(
-                navArgument("serverUrl") { type = NavType.StringType },
-                navArgument("username") { type = NavType.StringType },
-                navArgument("password") { type = NavType.StringType },
-                navArgument("serverName") { type = NavType.StringType },
-                navArgument("serverId") { type = NavType.StringType }
-            )
+            route = Screen.SessionList.route,
+            arguments = Screen.SessionList.args
         ) { backStackEntry ->
-            val serverUrl = URLDecoder.decode(
-                backStackEntry.arguments?.getString("serverUrl") ?: "", "UTF-8"
-            )
-            val username = URLDecoder.decode(
-                backStackEntry.arguments?.getString("username") ?: "", "UTF-8"
-            )
-            val password = URLDecoder.decode(
-                backStackEntry.arguments?.getString("password") ?: "", "UTF-8"
-            )
-            val serverName = URLDecoder.decode(
-                backStackEntry.arguments?.getString("serverName") ?: "", "UTF-8"
-            )
-            val serverId = URLDecoder.decode(
-                backStackEntry.arguments?.getString("serverId") ?: "", "UTF-8"
-            )
+            val serverUrl = backStackEntry.arguments?.getString("serverUrl") ?: ""
+            val username = backStackEntry.arguments?.getString("username") ?: ""
+            val password = backStackEntry.arguments?.getString("password") ?: ""
+            val serverName = backStackEntry.arguments?.getString("serverName") ?: ""
+            val serverId = backStackEntry.arguments?.getString("serverId") ?: ""
 
             SessionListScreen(
                 onNavigateToChat = { sessionId, openTerminal ->
@@ -450,35 +380,15 @@ fun NavGraph(
         
         // ============ Chat Screen (native) ============
         composable(
-            route = "chat?serverUrl={serverUrl}&username={username}&password={password}&serverName={serverName}&serverId={serverId}&sessionId={sessionId}&openTerminal={openTerminal}",
-            arguments = listOf(
-                navArgument("serverUrl") { type = NavType.StringType },
-                navArgument("username") { type = NavType.StringType },
-                navArgument("password") { type = NavType.StringType },
-                navArgument("serverName") { type = NavType.StringType },
-                navArgument("serverId") { type = NavType.StringType },
-                navArgument("sessionId") { type = NavType.StringType },
-                navArgument("openTerminal") { type = NavType.BoolType; defaultValue = false }
-            )
+            route = Screen.Chat.route,
+            arguments = Screen.Chat.args
         ) { backStackEntry ->
-            val serverUrl = URLDecoder.decode(
-                backStackEntry.arguments?.getString("serverUrl") ?: "", "UTF-8"
-            )
-            val username = URLDecoder.decode(
-                backStackEntry.arguments?.getString("username") ?: "", "UTF-8"
-            )
-            val password = URLDecoder.decode(
-                backStackEntry.arguments?.getString("password") ?: "", "UTF-8"
-            )
-            val serverName = URLDecoder.decode(
-                backStackEntry.arguments?.getString("serverName") ?: "", "UTF-8"
-            )
-            val serverId = URLDecoder.decode(
-                backStackEntry.arguments?.getString("serverId") ?: "", "UTF-8"
-            )
-            val sessionId = URLDecoder.decode(
-                backStackEntry.arguments?.getString("sessionId") ?: "", "UTF-8"
-            )
+            val serverUrl = backStackEntry.arguments?.getString("serverUrl") ?: ""
+            val username = backStackEntry.arguments?.getString("username") ?: ""
+            val password = backStackEntry.arguments?.getString("password") ?: ""
+            val serverName = backStackEntry.arguments?.getString("serverName") ?: ""
+            val serverId = backStackEntry.arguments?.getString("serverId") ?: ""
+            val sessionId = backStackEntry.arguments?.getString("sessionId") ?: ""
             val openTerminal = backStackEntry.arguments?.getBoolean("openTerminal") ?: false
 
             // Only pass shared images to the targeted session, then clear them
@@ -503,7 +413,7 @@ fun NavGraph(
                     )
                     navController.navigate(route) {
                         // Pop current chat so back goes to session list, not old session
-                        popUpTo("sessions?serverUrl={serverUrl}&username={username}&password={password}&serverName={serverName}&serverId={serverId}") {
+                        popUpTo(Screen.SessionList.route) {
                             inclusive = false
                         }
                     }
