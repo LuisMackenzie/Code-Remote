@@ -277,9 +277,10 @@ class ChatViewModel @Inject constructor(
              val lastUserWithModel = sessionMessages
                 .filterIsInstance<Message.User>()
                 .lastOrNull { it.model != null }
-             if (lastUserWithModel?.model != null) {
-                 effectiveProviderId = lastUserWithModel.model.providerId
-                 effectiveModelId = lastUserWithModel.model.modelId
+             val historyModel = lastUserWithModel?.model
+             if (historyModel != null) {
+                 effectiveProviderId = historyModel.providerId
+                 effectiveModelId = historyModel.modelId
              } else if (effectiveModelId == null && defaultModels.isNotEmpty()) {
                  // Fallback to default if nothing in history and nothing selected
                  val entry = defaultModels.entries.first()
@@ -377,8 +378,9 @@ class ChatViewModel @Inject constructor(
             if (draft.confirmedFilePaths.isNotEmpty()) {
                 _confirmedFilePaths.value = draft.confirmedFilePaths.toSet()
             }
-            if (!draft.selectedAgent.isNullOrBlank()) {
-                _selectedAgent.value = draft.selectedAgent to true
+            val agent = draft.selectedAgent
+            if (!agent.isNullOrBlank()) {
+                _selectedAgent.value = agent to true
             }
             if (!draft.selectedVariant.isNullOrBlank()) {
                 _selectedVariant.value = draft.selectedVariant

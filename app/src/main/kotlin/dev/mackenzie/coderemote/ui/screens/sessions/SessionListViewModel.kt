@@ -7,12 +7,21 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.mackenzie.coderemote.data.api.FileNode
-import dev.mackenzie.coderemote.data.api.OpenCodeApi
 import dev.mackenzie.coderemote.data.api.ServerConnection
 import dev.mackenzie.coderemote.data.repository.EventReducer
 import dev.mackenzie.coderemote.domain.model.Project
 import dev.mackenzie.coderemote.domain.model.Session
 import dev.mackenzie.coderemote.domain.model.SessionStatus
+import dev.mackenzie.coderemote.usecases.file.FindFilesUseCase
+import dev.mackenzie.coderemote.usecases.file.ListDirectoryUseCase
+import dev.mackenzie.coderemote.usecases.project.GetServerPathsUseCase
+import dev.mackenzie.coderemote.usecases.project.ListProjectsUseCase
+import dev.mackenzie.coderemote.usecases.session.CreateSessionUseCase
+import dev.mackenzie.coderemote.usecases.session.DeleteSessionUseCase
+import dev.mackenzie.coderemote.usecases.session.ExecuteCommandUseCase
+import dev.mackenzie.coderemote.usecases.session.ListSessionsUseCase
+import dev.mackenzie.coderemote.usecases.session.RunShellCommandUseCase
+import dev.mackenzie.coderemote.usecases.session.UpdateSessionUseCase
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -63,7 +72,16 @@ data class SessionItem(
 class SessionListViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val eventReducer: EventReducer,
-    private val api: OpenCodeApi
+    private val listProjects: ListProjectsUseCase,
+    private val listSessions: ListSessionsUseCase,
+    private val createSession: CreateSessionUseCase,
+    private val deleteSession: DeleteSessionUseCase,
+    private val updateSession: UpdateSessionUseCase,
+    private val executeCommand: ExecuteCommandUseCase,
+    private val runShellCommand: RunShellCommandUseCase,
+    private val getServerPaths: GetServerPathsUseCase,
+    private val listDirectory: ListDirectoryUseCase,
+    private val findFiles: FindFilesUseCase,
 ) : ViewModel() {
 
     val serverUrl: String = savedStateHandle.get<String>("serverUrl") ?: ""
@@ -172,13 +190,13 @@ class SessionListViewModel @Inject constructor(
             _error.value = null
             try {
                 // Load all projects first
-                val projects = api.listProjects(conn)
+                val projects = listProjects(conn)
                 _projects.value = projects
                 if (BuildConfig.DEBUG) Log.d(TAG, "Loaded ${projects.size} projects for multi-project session fetch")
 
                 if (projects.isEmpty()) {
                     // Fallback: load sessions without directory header (server CWD only)
-                    val sessions = api.listSessions(conn)
+                    val sessions = listSessions(conn)
                     eventReducer.setSessions(serverId, sessions)
                     if (BuildConfig.DEBUG) Log.d(TAG, "Loaded ${sessions.size} sessions (no projects)")
                 } else {
@@ -186,7 +204,7 @@ class SessionListViewModel @Inject constructor(
                     var totalSessions = 0
                     for (project in projects) {
                         try {
-                            val sessions = api.listSessions(conn, directory = project.worktree)
+                            val sessions = listSessions(conn, directory = project.worktree)
                             eventReducer.setSessions(serverId, sessions)
                             totalSessions += sessions.size
                             if (BuildConfig.DEBUG) Log.d(TAG, "Loaded ${sessions.size} sessions for project ${project.displayName}")
@@ -208,7 +226,7 @@ class SessionListViewModel @Inject constructor(
     private fun loadProjects() {
         viewModelScope.launch {
             try {
-                val projects = api.listProjects(conn)
+                val projects = listProjects(conn)
                 _projects.value = projects
                 if (BuildConfig.DEBUG) Log.d(TAG, "Loaded ${projects.size} projects")
             } catch (e: Exception) {
@@ -226,7 +244,7 @@ class SessionListViewModel @Inject constructor(
     fun createNewSession(directory: String? = null) {
         viewModelScope.launch {
             try {
-                val session = api.createSession(conn, directory = directory)
+                val session = createSession(conn, directory = directory)
                 // The SSE stream should pick up the new session, but also add directly
                 eventReducer.setSessions(serverId, listOf(session))
                 if (BuildConfig.DEBUG) Log.d(TAG, "Created new session: ${session.id}")
@@ -241,7 +259,7 @@ class SessionListViewModel @Inject constructor(
     fun deleteSession(sessionId: String) {
         viewModelScope.launch {
             try {
-                val success = api.deleteSession(conn, sessionId)
+                val success = deleteSession(conn, sessionId)
                 if (success) {
                     if (BuildConfig.DEBUG) Log.d(TAG, "Deleted session $sessionId")
                     loadSessions()
@@ -280,7 +298,7 @@ class SessionListViewModel @Inject constructor(
                 val results = coroutineScope {
                     ids.map { id ->
                         async {
-                            id to api.deleteSession(conn, id)
+                            id to deleteSession(conn, id)
                         }
                     }.awaitAll()
                 }
@@ -300,7 +318,7 @@ class SessionListViewModel @Inject constructor(
     fun renameSession(sessionId: String, newTitle: String) {
         viewModelScope.launch {
             try {
-                api.updateSession(conn, sessionId, newTitle)
+                updateSession(conn, sessionId, newTitle)
                 if (BuildConfig.DEBUG) Log.d(TAG, "Renamed session $sessionId to '$newTitle'")
                 loadSessions()
             } catch (e: Exception) {
@@ -316,7 +334,7 @@ class SessionListViewModel @Inject constructor(
     suspend fun getHomeDirectory(): String {
         _homeDir.value?.let { return it }
         return try {
-            val paths = api.getServerPaths(conn)
+            val paths = getServerPaths(conn)
             val home = paths.home
             _homeDir.value = home
             if (BuildConfig.DEBUG) Log.d(TAG, "Server home directory: $home")
@@ -330,7 +348,7 @@ class SessionListViewModel @Inject constructor(
     /** List directories in a given path on the server. */
     suspend fun listDirectories(directory: String): List<FileNode> {
         return try {
-            val nodes = api.listDirectory(conn, path = "", directory = directory)
+            val nodes = listDirectory(conn, path = "", directory = directory)
             nodes.filter { it.type == "directory" }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to list directory: $directory", e)
@@ -341,7 +359,7 @@ class SessionListViewModel @Inject constructor(
     /** Search for directories matching a query, scoped to a base directory. */
     suspend fun searchDirectories(query: String, directory: String): List<String> {
         return try {
-            api.findFiles(conn, query = query, type = "directory", directory = directory, limit = 50)
+            findFiles(conn, query = query, type = "directory", directory = directory, limit = 50)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to search directories", e)
             emptyList()
@@ -362,7 +380,7 @@ class SessionListViewModel @Inject constructor(
                 "${parentDirectory.trimEnd('/')}/$sanitized"
             }
 
-            val tempSession = api.createSession(
+            val tempSession = createSession(
                 conn = conn,
                 title = "mkdir",
                 directory = parentDirectory,
@@ -373,7 +391,7 @@ class SessionListViewModel @Inject constructor(
                 val command = "mkdir -p -- '$escaped'"
 
                 val runShellOk = runCatching {
-                    api.runShellCommand(
+                    runShellCommand(
                         conn = conn,
                         sessionId = tempSession.id,
                         command = command,
@@ -383,7 +401,7 @@ class SessionListViewModel @Inject constructor(
                 }.getOrElse { false }
 
                 if (!runShellOk) {
-                    val executeOk = api.executeCommand(
+                    val executeOk = executeCommand(
                         conn = conn,
                         sessionId = tempSession.id,
                         command = "bash",
@@ -395,7 +413,7 @@ class SessionListViewModel @Inject constructor(
                     }
                 }
             } finally {
-                runCatching { api.deleteSession(conn, tempSession.id) }
+                runCatching { deleteSession(conn, tempSession.id) }
             }
 
             repeat(6) {
@@ -411,7 +429,7 @@ class SessionListViewModel @Inject constructor(
 
     private suspend fun directoryExists(directory: String): Boolean {
         return try {
-            api.listDirectory(conn, path = "", directory = directory)
+            listDirectory(conn, path = "", directory = directory)
             true
         } catch (_: Exception) {
             false

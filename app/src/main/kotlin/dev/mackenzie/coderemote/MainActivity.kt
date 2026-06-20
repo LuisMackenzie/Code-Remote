@@ -22,9 +22,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.lifecycleScope
-import dev.mackenzie.coderemote.data.repository.SettingsRepository
+import dev.mackenzie.coderemote.di.LocaleReader
 import dev.mackenzie.coderemote.data.repository.ServerRepository
 import dev.mackenzie.coderemote.data.repository.EventReducer
+import dev.mackenzie.coderemote.data.repository.SettingsRepository
 import dev.mackenzie.coderemote.service.OpenCodeConnectionService
 import dev.mackenzie.coderemote.ui.navigation.NavGraph
 import dev.mackenzie.coderemote.ui.theme.OpenCodeTheme
@@ -100,7 +101,7 @@ class MainActivity : ComponentActivity() {
 
     override fun attachBaseContext(newBase: Context) {
         // Read stored language synchronously from SharedPreferences (no Hilt needed).
-        val languageCode = SettingsRepository.getStoredLanguage(newBase)
+        val languageCode = LocaleReader.getStoredLanguage(newBase)
         appliedLanguage = languageCode
 
         if (languageCode.isNotEmpty()) {

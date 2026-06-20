@@ -2,9 +2,14 @@
 
 ## Project shape
 
-- Single Android module: `:app`; package namespace `dev.mackenzie.coderemote`.
-- Toolchain from Gradle files: Gradle 8.6, Android Gradle Plugin 8.4.0, Kotlin 2.0.21, Java 17.
+- Multi-module Android project under namespace `dev.mackenzie.coderemote`:
+  - `:domain` — pure Kotlin/JVM module: domain models (`Session`, `Message`, `Part`, `SseEvent`, `ServerConfig`, `SessionStatus`, `ToolState`). No Android dependencies.
+  - `:data` — pure Kotlin/JVM module: repository implementations (`ServerRepository`, `SettingsRepository`, `DraftRepository`, `EventReducer`), datasource interfaces (`OpenCodeApi`, `SseClient`, `PtySocket`), DTOs, and platform abstractions (`AppLogger`, `KeyValueStorage`, `FileStorage`, `ServerConnection`). No Android dependencies.
+  - `:usecases` — pure Kotlin/JVM module: use cases grouped by feature under `usecases/{server,session,message,permission,question,provider,config,pty,file,project,draft}/`, each with `operator fun invoke()`.
+  - `:app` — Android application module: Hilt DI, Compose UI, ViewModels, Ktor implementations (`KtorOpenCodeApi`, `KtorSseClient`, `KtorPtySocket`), storage implementations (`DataStoreKeyValueStorage`, `FileStorageImpl`, `AndroidLogger`), and `local/LocalServerManager.kt` (Termux orchestration).
+- Toolchain from Gradle files: Gradle 8.6, Android Gradle Plugin 8.4.0, Kotlin 2.0.21, Java 17, KSP `2.0.21-1.0.28`, Hilt 2.51 (via KSP, not kapt).
 - Main entrypoints: `OpenCodeApp` for Hilt, `MainActivity` for the single-activity Compose shell, `ui/navigation/NavGraph.kt` for routes, and `service/OpenCodeConnectionService.kt` for foreground SSE connections.
+- Dependency direction: `:app` → `:usecases` → `:data` → `:domain`. Inner modules never import from outer modules.
 
 ## Android skills to prioritize
 
@@ -45,11 +50,14 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 
 ## Source boundaries
 
-- `data/api/` owns Ktor HTTP, SSE, and WebSocket API access.
-- `data/repository/` owns app persistence, local runtime orchestration, and event reduction.
-- `domain/model/` holds the app's OpenCode data models and serialized DTOs.
-- `ui/screens/` contains Compose screens; shared navigation stays in `ui/navigation/`.
-- `di/NetworkModule.kt` provides the singleton Ktor client, JSON config, and DataStore.
+- `:domain/model/` holds pure Kotlin data models and sealed types (only `kotlinx.serialization`).
+- `:data/api/` owns datasource interfaces (`OpenCodeApi`, `SseClient`, `PtySocket`), `ServerConnection`, request/response DTOs, and SSE exceptions.
+- `:data/repository/` owns app persistence, local runtime orchestration, and event reduction; uses `AppLogger`, `KeyValueStorage`, `FileStorage` abstractions instead of Android APIs.
+- `:usecases/<feature>/` groups one class per operation, each with `operator fun invoke()`. Use cases wrap `OpenCodeApi` and repository calls.
+- `:app/di/` provides Hilt modules: `NetworkModule` (@Provides for `HttpClient`, `Json`, `DataStore`) and `DataModule` (@Binds for `OpenCodeApi`, `SseClient`, `AppLogger`, `KeyValueStorage`, `FileStorage`). Ktor/storage implementations live here.
+- `:app/local/LocalServerManager.kt` owns Termux/Intent/PackageManager orchestration (100% Android, cannot live in `:data`).
+- `:app/ui/screens/` contains Compose screens; shared navigation stays in `ui/navigation/`.
+- ViewModels that still inject `OpenCodeApi` directly (e.g. `ChatViewModel`): pending migration to use cases. New ViewModels should inject use cases only.
 
 ## Localization
 

@@ -17,3 +17,6 @@ dependencyResolutionManagement {
 
 rootProject.name = "Code Remote"
 include(":app")
+include(":domain")
+include(":data")
+include(":usecases")

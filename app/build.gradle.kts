@@ -7,7 +7,7 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.dagger.hilt.android")
     id("org.jetbrains.kotlin.plugin.serialization")
-    kotlin("kapt")
+    id("com.google.devtools.ksp")
 }
 
 android {
@@ -82,6 +82,11 @@ android {
 }
 
 dependencies {
+    // Internal modules
+    implementation(project(":domain"))
+    implementation(project(":data"))
+    implementation(project(":usecases"))
+
     // Android Core
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.appcompat:appcompat:1.7.0")
@@ -105,7 +110,7 @@ dependencies {
 
     // Hilt DI
     implementation("com.google.dagger:hilt-android:2.51")
-    kapt("com.google.dagger:hilt-android-compiler:2.51")
+    ksp("com.google.dagger:hilt-android-compiler:2.51")
 
     // Ktor Client (OkHttp engine for proper SSE streaming support)
     val ktorVersion = "2.3.11"
@@ -149,8 +154,4 @@ dependencies {
     androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
     androidTestImplementation(composeBom)
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
-}
-
-kapt {
-    correctErrorTypes = true
 }

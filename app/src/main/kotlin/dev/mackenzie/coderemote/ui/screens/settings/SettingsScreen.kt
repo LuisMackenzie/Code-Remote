@@ -46,7 +46,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import dev.mackenzie.coderemote.data.repository.LocalServerManager
+import dev.mackenzie.coderemote.local.LocalServerManager
 import dev.mackenzie.coderemote.R
 import java.util.Locale
 import kotlin.math.roundToInt

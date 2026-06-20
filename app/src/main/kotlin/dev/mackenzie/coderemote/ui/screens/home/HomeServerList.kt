@@ -8,7 +8,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import dev.mackenzie.coderemote.data.repository.LocalServerManager
+import dev.mackenzie.coderemote.local.LocalServerManager
 import dev.mackenzie.coderemote.domain.model.ServerConfig
 
 @Composable

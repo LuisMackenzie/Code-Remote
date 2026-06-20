@@ -3,7 +3,7 @@ package dev.mackenzie.coderemote.ui.screens.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dev.mackenzie.coderemote.data.repository.LocalServerManager
+import dev.mackenzie.coderemote.local.LocalServerManager
 import dev.mackenzie.coderemote.data.repository.SettingsRepository
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn

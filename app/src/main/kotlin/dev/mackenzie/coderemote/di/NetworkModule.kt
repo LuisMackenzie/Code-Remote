@@ -4,11 +4,17 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
+import dagger.Binds
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import dev.mackenzie.coderemote.data.AppLogger
+import dev.mackenzie.coderemote.data.FileStorage
+import dev.mackenzie.coderemote.data.KeyValueStorage
+import dev.mackenzie.coderemote.data.api.OpenCodeApi
+import dev.mackenzie.coderemote.data.api.SseClient
 import io.ktor.client.*
 import io.ktor.client.engine.okhttp.*
 import io.ktor.client.plugins.*
@@ -25,7 +31,7 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(na
 @Module
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
-    
+
     @Provides
     @Singleton
     fun provideJson(): Json = Json {
@@ -36,19 +42,19 @@ object NetworkModule {
         encodeDefaults = true
         explicitNulls = false
     }
-    
+
     @Provides
     @Singleton
     fun provideHttpClient(json: Json): HttpClient = HttpClient(OkHttp) {
         install(ContentNegotiation) {
             json(json)
         }
-        
+
         install(Logging) {
             logger = Logger.ANDROID
             level = LogLevel.HEADERS
         }
-        
+
         install(HttpTimeout) {
             requestTimeoutMillis = 120_000
             connectTimeoutMillis = 15_000
@@ -56,24 +62,50 @@ object NetworkModule {
         }
 
         install(WebSockets)
-        
+
         install(Auth) {
             // Auth will be configured per-request based on server config
         }
-        
+
         engine {
             config {
                 // OkHttp-specific: disable response body buffering for streaming
                 retryOnConnectionFailure(true)
             }
         }
-        
+
         // Default headers will be set per-request in OpenCodeApi
     }
-    
+
     @Provides
     @Singleton
     fun provideDataStore(@ApplicationContext context: Context): DataStore<Preferences> {
         return context.dataStore
     }
 }
+
+@Module
+@InstallIn(SingletonComponent::class)
+abstract class DataModule {
+
+    @Binds
+    @Singleton
+    abstract fun bindOpenCodeApi(impl: KtorOpenCodeApi): OpenCodeApi
+
+    @Binds
+    @Singleton
+    abstract fun bindSseClient(impl: KtorSseClient): SseClient
+
+    @Binds
+    @Singleton
+    abstract fun bindAppLogger(impl: AndroidLogger): AppLogger
+
+    @Binds
+    @Singleton
+    abstract fun bindKeyValueStorage(impl: DataStoreKeyValueStorage): KeyValueStorage
+
+    @Binds
+    @Singleton
+    abstract fun bindFileStorage(impl: FileStorageImpl): FileStorage
+}
+

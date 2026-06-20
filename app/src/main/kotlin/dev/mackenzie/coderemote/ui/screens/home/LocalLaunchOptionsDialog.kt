@@ -62,7 +62,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import dev.mackenzie.coderemote.R
-import dev.mackenzie.coderemote.data.repository.LocalServerManager
+import dev.mackenzie.coderemote.local.LocalServerManager
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

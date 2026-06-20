@@ -3524,9 +3524,10 @@ private fun ChatMessageBubble(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(5.dp)
                             ) {
-                                if (assistantMsg?.providerId != null) {
+                                val pid = assistantMsg?.providerId
+                                if (pid != null) {
                                     ProviderIcon(
-                                        providerId = assistantMsg.providerId,
+                                        providerId = pid,
                                         size = 12.dp,
                                         tint = textColor.copy(alpha = 0.4f)
                                     )

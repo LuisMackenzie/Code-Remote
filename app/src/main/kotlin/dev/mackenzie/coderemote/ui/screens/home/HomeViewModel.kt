@@ -13,13 +13,13 @@ import dev.mackenzie.coderemote.BuildConfig
 import dev.mackenzie.coderemote.R
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import dev.mackenzie.coderemote.data.api.OpenCodeApi
 import dev.mackenzie.coderemote.data.api.ServerConnection
-import dev.mackenzie.coderemote.data.repository.LocalServerManager
+import dev.mackenzie.coderemote.local.LocalServerManager
 import dev.mackenzie.coderemote.data.repository.ServerRepository
 import dev.mackenzie.coderemote.data.repository.SettingsRepository
 import dev.mackenzie.coderemote.domain.model.ServerConfig
 import dev.mackenzie.coderemote.service.OpenCodeConnectionService
+import dev.mackenzie.coderemote.usecases.provider.GetProvidersUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -82,7 +82,7 @@ private data class LocalRuntimeErrorInfo(
 class HomeViewModel @Inject constructor(
     application: Application,
     private val serverRepository: ServerRepository,
-    private val api: OpenCodeApi,
+    private val getProviders: GetProvidersUseCase,
     private val localServerManager: LocalServerManager,
     private val settingsRepository: SettingsRepository,
 ) : AndroidViewModel(application) {
@@ -251,7 +251,7 @@ class HomeViewModel @Inject constructor(
 
                 try {
                     val conn = ServerConnection.from(server.url, server.username, server.password)
-                    val response = api.getProviders(conn)
+                    val response = getProviders(conn)
                     val hasModels = response.providers.any { it.models.isNotEmpty() }
                     _uiState.update {
                         it.copy(

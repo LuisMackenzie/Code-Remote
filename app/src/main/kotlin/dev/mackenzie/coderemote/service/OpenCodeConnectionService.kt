@@ -16,9 +16,10 @@ import dev.mackenzie.coderemote.data.api.OpenCodeApi
 import dev.mackenzie.coderemote.data.api.ServerConnection
 import dev.mackenzie.coderemote.data.api.SseClient
 import dev.mackenzie.coderemote.data.repository.EventReducer
-import dev.mackenzie.coderemote.data.repository.LocalServerManager
+import dev.mackenzie.coderemote.local.LocalServerManager
 import dev.mackenzie.coderemote.data.repository.ServerRepository
 import dev.mackenzie.coderemote.data.repository.SettingsRepository
+import dev.mackenzie.coderemote.di.LocaleReader
 import dev.mackenzie.coderemote.domain.model.Message
 import dev.mackenzie.coderemote.domain.model.Part
 import dev.mackenzie.coderemote.domain.model.ServerConfig
@@ -77,7 +78,7 @@ private data class ServerConnectionState(
 class OpenCodeConnectionService : Service() {
 
     override fun attachBaseContext(newBase: Context) {
-        val languageCode = SettingsRepository.getStoredLanguage(newBase)
+        val languageCode = LocaleReader.getStoredLanguage(newBase)
         if (languageCode.isNotEmpty()) {
             val locale = MainActivity.parseLocale(languageCode)
             Locale.setDefault(locale)
@@ -532,7 +533,8 @@ class OpenCodeConnectionService : Service() {
                 showQuestionNotification(server, event.sessionId, questionText)
             }
             is SseEvent.SessionError -> {
-                if (event.sessionId != null && isChildSession(event.sessionId)) return
+                val sid = event.sessionId
+                if (sid != null && isChildSession(sid)) return
                 Log.i(TAG, "[${server.displayName}] Session error: ${event.error}")
                 showErrorNotification(server, event.sessionId, event.error)
             }
