@@ -85,6 +85,8 @@ import dev.mackenzie.coderemote.ui.components.PulsingDotsIndicator
 import dev.mackenzie.coderemote.ui.components.ProviderIcon
 import dev.mackenzie.coderemote.ui.screens.chat.messages.FileCard
 import dev.mackenzie.coderemote.ui.screens.chat.messages.ImageThumbnailRow
+import dev.mackenzie.coderemote.ui.screens.chat.messages.PatchCard
+import dev.mackenzie.coderemote.ui.screens.chat.messages.ReasoningBlock
 import dev.mackenzie.coderemote.ui.screens.chat.ui.ChatInputBar
 import dev.mackenzie.coderemote.ui.screens.chat.ui.ChatInputMode
 import dev.mackenzie.coderemote.ui.screens.chat.ui.ImageAttachment
@@ -1893,7 +1895,6 @@ private fun resolveStepsStatus(stepParts: List<Part>): String {
         else -> stringResource(R.string.chat_status_thinking)
     }
 }
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ChatMessageBubble(
@@ -2547,47 +2548,6 @@ private fun MarkdownContent(
             imageTransformer = Coil2ImageTransformerImpl,
             modifier = Modifier.fillMaxWidth()
         )
-    }
-}
-
-@Composable
-private fun ReasoningBlock(text: String) {
-    val isAmoled = isAmoledTheme()
-    Surface(
-        shape = RoundedCornerShape(8.dp),
-        color = if (isAmoled) Color.Black else MaterialTheme.colorScheme.surfaceContainer,
-        border = if (isAmoled) BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.65f)) else null,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Row(modifier = Modifier.height(IntrinsicSize.Min)) {
-            // Left accent border
-            Box(
-                modifier = Modifier
-                    .width(3.dp)
-                    .fillMaxHeight()
-                    .background(MaterialTheme.colorScheme.outlineVariant)
-            )
-            
-            Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
-                Text(
-                    text = stringResource(R.string.chat_status_thinking),
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        letterSpacing = 0.6.sp,
-                        fontWeight = FontWeight.Medium
-                    ),
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    text = text,
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
-                        lineHeight = 20.sp
-                    ),
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                )
-            }
-        }
     }
 }
 
@@ -3871,105 +3831,5 @@ private fun TodoItemRow(todo: TodoItem) {
             ),
             modifier = Modifier.weight(1f)
         )
-    }
-}
-
-@Composable
-private fun StepFinishInfo(step: Part.StepFinish) {
-    if (step.tokens != null || step.cost != null) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            step.tokens?.let { tokens ->
-                Text(
-                    text = stringResource(R.string.chat_tokens_format, tokens.input, tokens.output),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
-                )
-            }
-            step.cost?.let { cost ->
-                Text(
-                    text = stringResource(R.string.chat_cost_format, String.format("%.4f", cost)),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun PatchCard(patch: Part.Patch) {
-    val isAmoled = isAmoledTheme()
-    val autoExpand = LocalCollapseTools.current
-    val hapticView = LocalView.current
-    val hapticOn = LocalHapticFeedbackEnabled.current
-    var expanded by remember(autoExpand) { mutableStateOf(autoExpand) }
-
-    Surface(
-        shape = RoundedCornerShape(8.dp),
-        color = if (isAmoled) Color.Black else MaterialTheme.colorScheme.surface,
-        border = if (isAmoled) BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.65f)) else null,
-        tonalElevation = if (isAmoled) 0.dp else 1.dp,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(modifier = Modifier.padding(8.dp)) {
-            // Header row
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { performHaptic(hapticView, hapticOn); expanded = !expanded },
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Icon(
-                        Icons.Default.Code,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                    Text(
-                        text = if (patch.files.size == 1)
-                            stringResource(R.string.chat_files_changed, patch.files.size)
-                        else
-                            stringResource(R.string.chat_files_changed_plural, patch.files.size),
-                        style = MaterialTheme.typography.labelMedium
-                    )
-                }
-                Icon(
-                    imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                    contentDescription = if (expanded) stringResource(R.string.chat_collapse) else stringResource(R.string.chat_expand),
-                    modifier = Modifier.size(16.dp),
-                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
-                )
-            }
-
-            // Expanded file list
-            AnimatedVisibility(visible = expanded) {
-                Column(
-                    modifier = Modifier.padding(top = 6.dp),
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
-                ) {
-                    for (filePath in patch.files) {
-                        Text(
-                            text = filePath.substringAfterLast('/'),
-                            style = CodeTypography.copy(
-                                fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.onSurface
-                            ),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.padding(vertical = 2.dp)
-                        )
-                    }
-                }
-            }
-        }
     }
 }
