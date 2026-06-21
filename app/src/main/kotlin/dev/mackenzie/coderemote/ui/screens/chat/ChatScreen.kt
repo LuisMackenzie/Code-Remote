@@ -47,13 +47,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.zIndex
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.BackHandler
@@ -82,9 +79,6 @@ import android.media.AudioManager
 import android.os.SystemClock
 import android.util.Base64
 import android.util.Log
-import android.view.MotionEvent
-import android.webkit.WebView
-import android.webkit.WebViewClient
 import dev.mackenzie.coderemote.BuildConfig
 import dev.mackenzie.coderemote.R
 import androidx.compose.ui.graphics.asImageBitmap
@@ -102,113 +96,14 @@ import dev.mackenzie.coderemote.ui.screens.chat.terminal.SessionTerminalInline
 import dev.mackenzie.coderemote.ui.screens.chat.terminal.TerminalKeyboardOverlay
 import dev.mackenzie.coderemote.ui.screens.chat.terminal.applyTerminalModifiers
 import dev.mackenzie.coderemote.ui.screens.chat.terminal.applyTermuxFnBindings
+import dev.mackenzie.coderemote.ui.screens.chat.components.ErrorPayloadContent
+import dev.mackenzie.coderemote.ui.screens.chat.components.preserveRawHtmlPayload
 
 
 /**
  * Chat Screen - conversation view with native markdown rendering.
  * Shows messages with streaming text rendered via mikepenz markdown renderer.
  */
-
-private enum class HtmlErrorViewMode {
-    Page,
-    Code,
-}
-
-@Composable
-private fun ErrorPayloadContent(
-    text: String,
-    textStyle: TextStyle,
-    textColor: Color,
-    modifier: Modifier = Modifier,
-) {
-    if (!looksLikeHtmlPayload(text)) {
-        SelectionContainer {
-            Text(
-                text = text,
-                style = textStyle,
-                color = textColor,
-                modifier = modifier,
-            )
-        }
-        return
-    }
-
-    var mode by rememberSaveable(text) { mutableStateOf(HtmlErrorViewMode.Code) }
-    val htmlForPreview = remember(text) { normalizeHtmlForEmbeddedPreview(text) }
-
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilterChip(
-                selected = mode == HtmlErrorViewMode.Code,
-                onClick = { mode = HtmlErrorViewMode.Code },
-                label = { Text(stringResource(R.string.chat_error_view_code)) },
-            )
-            FilterChip(
-                selected = mode == HtmlErrorViewMode.Page,
-                onClick = { mode = HtmlErrorViewMode.Page },
-                label = { Text(stringResource(R.string.chat_error_view_page)) },
-            )
-        }
-
-        if (mode == HtmlErrorViewMode.Page) {
-            val isAmoled = isAmoledTheme()
-            val bgColor = if (isAmoled) Color.Black else MaterialTheme.colorScheme.surface
-            AndroidView(
-                factory = { context ->
-                    WebView(context).apply {
-                        settings.javaScriptEnabled = false
-                        settings.domStorageEnabled = false
-                        settings.allowFileAccess = false
-                        settings.allowContentAccess = false
-                        settings.setSupportMultipleWindows(false)
-                        settings.useWideViewPort = true
-                        settings.loadWithOverviewMode = true
-                        settings.textZoom = 85
-                        settings.builtInZoomControls = false
-                        settings.displayZoomControls = false
-                        webViewClient = WebViewClient()
-                        setOnTouchListener { v, event ->
-                            if (event.actionMasked == MotionEvent.ACTION_DOWN || event.actionMasked == MotionEvent.ACTION_MOVE) {
-                                v.parent?.requestDisallowInterceptTouchEvent(true)
-                            }
-                            false
-                        }
-                        setBackgroundColor(bgColor.toArgb())
-                    }
-                },
-                update = { webView ->
-                    if (webView.tag != htmlForPreview) {
-                        webView.tag = htmlForPreview
-                        webView.loadDataWithBaseURL(
-                            "https://localhost/",
-                            htmlForPreview,
-                            "text/html",
-                            "UTF-8",
-                            null,
-                        )
-                    }
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 220.dp, max = 360.dp)
-                    .border(
-                        width = 1.dp,
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
-                        shape = RoundedCornerShape(8.dp),
-                    )
-                    .clip(RoundedCornerShape(8.dp)),
-            )
-        } else {
-            SelectionContainer {
-                Text(
-                    text = text,
-                    style = textStyle,
-                    color = textColor,
-                )
-            }
-        }
-    }
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -2653,63 +2548,6 @@ private fun MarkdownContent(
             imageTransformer = Coil2ImageTransformerImpl,
             modifier = Modifier.fillMaxWidth()
         )
-    }
-}
-
-private val HtmlDocumentHintRegex = Regex("(?is)<!doctype\\s+html\\b|<\\s*html\\b")
-private val HtmlTagRegex = Regex("(?is)<\\s*/?\\s*[a-z][^>]*>")
-
-private fun looksLikeHtmlPayload(text: String): Boolean {
-    if (text.isBlank()) return false
-    if (HtmlDocumentHintRegex.containsMatchIn(text)) return true
-    return HtmlTagRegex.findAll(text).take(12).count() >= 6
-}
-
-private fun normalizeHtmlForEmbeddedPreview(html: String): String {
-    if (html.isBlank()) return html
-    val overrideCss = """
-        html, body {
-          margin: 0 !important;
-          padding: 8px !important;
-          min-height: auto !important;
-          height: auto !important;
-        }
-        body {
-          display: block !important;
-          align-items: flex-start !important;
-          justify-content: flex-start !important;
-          overflow: auto !important;
-        }
-        .container {
-          align-items: flex-start !important;
-          justify-content: flex-start !important;
-          height: auto !important;
-          min-height: auto !important;
-          width: 100% !important;
-          margin: 0 !important;
-        }
-    """.trimIndent()
-
-    val styleBlock = "<style>$overrideCss</style>"
-    return if (html.contains("</head>", ignoreCase = true)) {
-        html.replaceFirst(Regex("(?i)</head>"), "$styleBlock</head>")
-    } else {
-        "<head>$styleBlock</head>$html"
-    }
-}
-
-private fun preserveRawHtmlPayload(markdown: String): String {
-    if (markdown.isBlank()) return markdown
-    if ("```" in markdown) return markdown
-
-    val looksLikeHtmlDocument = HtmlDocumentHintRegex.containsMatchIn(markdown)
-    val htmlTagCount = HtmlTagRegex.findAll(markdown).take(16).count()
-    if (!looksLikeHtmlDocument && htmlTagCount < 8) return markdown
-
-    return buildString(markdown.length + 16) {
-        append("```text\n")
-        append(markdown.trimEnd())
-        append("\n```")
     }
 }
 
