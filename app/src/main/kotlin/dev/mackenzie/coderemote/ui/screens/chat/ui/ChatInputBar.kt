@@ -93,7 +93,7 @@ import dev.mackenzie.coderemote.domain.model.ToolState
 import dev.mackenzie.coderemote.ui.components.ProviderIcon
 import dev.mackenzie.coderemote.ui.components.PulsingDotsIndicator
 import dev.mackenzie.coderemote.ui.screens.chat.ChatMessage
-import dev.mackenzie.coderemote.ui.screens.chat.ImagePreviewDialog
+import dev.mackenzie.coderemote.ui.screens.chat.messages.ImagePreviewDialog
 import dev.mackenzie.coderemote.ui.screens.chat.isAmoledTheme
 import kotlinx.coroutines.delay
 

@@ -77,14 +77,13 @@ import android.net.Uri
 import android.content.Intent
 import android.media.AudioManager
 import android.os.SystemClock
-import android.util.Base64
 import android.util.Log
 import dev.mackenzie.coderemote.BuildConfig
 import dev.mackenzie.coderemote.R
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.res.stringResource
 import dev.mackenzie.coderemote.ui.components.PulsingDotsIndicator
 import dev.mackenzie.coderemote.ui.components.ProviderIcon
+import dev.mackenzie.coderemote.ui.screens.chat.messages.ImageThumbnailRow
 import dev.mackenzie.coderemote.ui.screens.chat.ui.ChatInputBar
 import dev.mackenzie.coderemote.ui.screens.chat.ui.ChatInputMode
 import dev.mackenzie.coderemote.ui.screens.chat.ui.ImageAttachment
@@ -3968,164 +3967,6 @@ private fun PatchCard(patch: Part.Patch) {
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.padding(vertical = 2.dp)
                         )
-                    }
-                }
-            }
-        }
-    }
-}
-
-/**
- * Compact horizontal row of image thumbnails with tap-to-preview.
- */
-@Composable
-private fun ImageThumbnailRow(
-    imageFiles: List<Part.File>,
-) {
-    var previewIndex by remember { mutableStateOf(-1) }
-    val requestSaveImage = LocalImageSaveRequest.current
-
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(6.dp)
-    ) {
-        for ((index, file) in imageFiles.withIndex()) {
-            val bitmap = remember(file.url) {
-                try {
-                    val url = file.url ?: return@remember null
-                    val base64Data = if (url.contains(",")) url.substringAfter(",") else url
-                    val bytes = Base64.decode(base64Data, Base64.DEFAULT)
-                    android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                } catch (e: Exception) {
-                    Log.e("FileCard", "Failed to decode image: ${e.message}")
-                    null
-                }
-            }
-
-            if (bitmap != null) {
-                androidx.compose.foundation.Image(
-                    bitmap = bitmap.asImageBitmap(),
-                    contentDescription = file.filename ?: stringResource(R.string.chat_image),
-                    modifier = Modifier
-                        .size(80.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .clickable { previewIndex = index },
-                    contentScale = ContentScale.Crop
-                )
-            } else {
-                // Fallback placeholder for failed decode
-                Box(
-                    modifier = Modifier
-                        .size(80.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(MaterialTheme.colorScheme.surface),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        Icons.Default.BrokenImage,
-                        contentDescription = null,
-                        modifier = Modifier.size(24.dp),
-                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
-                    )
-                }
-            }
-        }
-    }
-
-    // Fullscreen image preview dialog
-    if (previewIndex >= 0 && previewIndex < imageFiles.size) {
-        val file = imageFiles[previewIndex]
-        val imageBytes = remember(file.url) { decodePartFileBytes(file) }
-        val bitmap = remember(imageBytes) {
-            imageBytes?.let { bytes -> android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size) }
-        }
-
-        if (bitmap != null) {
-            ImagePreviewDialog(
-                bitmap = bitmap.asImageBitmap(),
-                contentDescription = file.filename ?: stringResource(R.string.chat_image),
-                onDismiss = { previewIndex = -1 },
-                onSave = {
-                    if (imageBytes != null) {
-                        requestSaveImage(imageBytes, file.mime, file.filename)
-                    }
-                },
-            )
-        }
-    }
-}
-
-@Composable
-@OptIn(ExperimentalMaterial3Api::class)
-internal fun ImagePreviewDialog(
-    bitmap: androidx.compose.ui.graphics.ImageBitmap,
-    contentDescription: String?,
-    onDismiss: () -> Unit,
-    onSave: () -> Unit,
-) {
-    val isAmoled = isAmoledTheme()
-    BasicAlertDialog(onDismissRequest = onDismiss) {
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp),
-            shape = RoundedCornerShape(24.dp),
-            color = if (isAmoled) Color.Black else MaterialTheme.colorScheme.surfaceContainerHigh,
-            border = if (isAmoled) {
-                BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.75f))
-            } else {
-                null
-            },
-            tonalElevation = if (isAmoled) 0.dp else 6.dp,
-        ) {
-            Box(modifier = Modifier.padding(14.dp)) {
-                androidx.compose.foundation.Image(
-                    bitmap = bitmap,
-                    contentDescription = contentDescription,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 520.dp)
-                        .clip(RoundedCornerShape(14.dp)),
-                    contentScale = ContentScale.Fit,
-                )
-
-                Row(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(6.dp),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    val actionContainerColor = if (isAmoled) Color.Black else MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
-                    val actionBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = if (isAmoled) 0.85f else 0.8f)
-                    val actionTintColor = MaterialTheme.colorScheme.onSurface
-
-                    Surface(
-                        shape = RoundedCornerShape(10.dp),
-                        color = actionContainerColor,
-                        border = BorderStroke(1.dp, actionBorderColor),
-                    ) {
-                        IconButton(onClick = onSave, modifier = Modifier.size(36.dp)) {
-                            Icon(
-                                Icons.Default.Download,
-                                contentDescription = stringResource(R.string.chat_save_image),
-                                tint = actionTintColor,
-                            )
-                        }
-                    }
-
-                    Surface(
-                        shape = RoundedCornerShape(10.dp),
-                        color = actionContainerColor,
-                        border = BorderStroke(1.dp, actionBorderColor),
-                    ) {
-                        IconButton(onClick = onDismiss, modifier = Modifier.size(36.dp)) {
-                            Icon(
-                                Icons.Default.Close,
-                                contentDescription = stringResource(R.string.close),
-                                tint = actionTintColor,
-                            )
-                        }
                     }
                 }
             }
