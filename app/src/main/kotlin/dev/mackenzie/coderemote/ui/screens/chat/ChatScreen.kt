@@ -140,6 +140,7 @@ import dev.mackenzie.coderemote.ui.screens.chat.ui.ChatInputMode
 import dev.mackenzie.coderemote.ui.screens.chat.ui.ImageAttachment
 import dev.mackenzie.coderemote.ui.screens.chat.ui.PermissionCard
 import dev.mackenzie.coderemote.ui.screens.chat.ui.QuestionCard
+import dev.mackenzie.coderemote.ui.screens.chat.ui.RevertBanner
 
 
 /**
@@ -3639,55 +3640,6 @@ private fun resolveUserCommandLabel(parts: List<Part>): String? {
             if (hasNonRenderableOnly) stringResource(R.string.chat_tool_running_command) else null
         }
         else -> stringResource(R.string.chat_tool_running_command)
-    }
-}
-
-/**
- * Banner shown when messages have been reverted.
- * Tapping restores (redo) the reverted messages.
- */
-@Composable
-private fun RevertBanner(onRedo: () -> Unit) {
-    val hapticView = LocalView.current
-    val hapticOn = LocalHapticFeedbackEnabled.current
-    Surface(
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.6f),
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 4.dp)
-            .clickable { performHaptic(hapticView, hapticOn); onRedo() }
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                Icons.AutoMirrored.Filled.Undo,
-                contentDescription = null,
-                modifier = Modifier.size(18.dp),
-                tint = MaterialTheme.colorScheme.onTertiaryContainer
-            )
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = stringResource(R.string.chat_messages_reverted),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onTertiaryContainer
-                )
-                Text(
-                    text = stringResource(R.string.chat_tap_restore),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f)
-                )
-            }
-            Icon(
-                Icons.Default.Restore,
-                contentDescription = stringResource(R.string.chat_restore),
-                modifier = Modifier.size(20.dp),
-                tint = MaterialTheme.colorScheme.onTertiaryContainer
-            )
-        }
     }
 }
 
