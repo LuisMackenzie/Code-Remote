@@ -35,7 +35,7 @@ import dev.mackenzie.coderemote.R
 import dev.mackenzie.coderemote.domain.model.Part
 import dev.mackenzie.coderemote.domain.model.ToolState
 import dev.mackenzie.coderemote.ui.screens.chat.LocalHapticFeedbackEnabled
-import dev.mackenzie.coderemote.ui.screens.chat.ToolCallCard
+import dev.mackenzie.coderemote.ui.screens.chat.messages.toolcards.ToolCallCard
 import dev.mackenzie.coderemote.ui.screens.chat.isAmoledTheme
 import dev.mackenzie.coderemote.ui.screens.chat.performHaptic
 import kotlinx.serialization.json.contentOrNull

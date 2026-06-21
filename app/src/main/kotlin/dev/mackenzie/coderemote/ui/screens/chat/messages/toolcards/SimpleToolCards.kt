@@ -51,8 +51,8 @@ import dev.mackenzie.coderemote.ui.components.PulsingDotsIndicator
 import dev.mackenzie.coderemote.ui.screens.chat.LocalCollapseTools
 import dev.mackenzie.coderemote.ui.screens.chat.LocalHapticFeedbackEnabled
 import dev.mackenzie.coderemote.ui.screens.chat.codeHorizontalScroll
-import dev.mackenzie.coderemote.ui.screens.chat.extractToolInput
-import dev.mackenzie.coderemote.ui.screens.chat.extractToolOutput
+import dev.mackenzie.coderemote.ui.screens.chat.messages.toolcards.extractToolInput
+import dev.mackenzie.coderemote.ui.screens.chat.messages.toolcards.extractToolOutput
 import dev.mackenzie.coderemote.ui.screens.chat.isAmoledTheme
 import dev.mackenzie.coderemote.ui.screens.chat.performHaptic
 import dev.mackenzie.coderemote.ui.screens.chat.toolOutputContainerColor
