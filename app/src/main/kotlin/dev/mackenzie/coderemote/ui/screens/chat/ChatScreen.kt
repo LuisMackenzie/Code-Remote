@@ -83,6 +83,7 @@ import dev.mackenzie.coderemote.R
 import androidx.compose.ui.res.stringResource
 import dev.mackenzie.coderemote.ui.components.PulsingDotsIndicator
 import dev.mackenzie.coderemote.ui.components.ProviderIcon
+import dev.mackenzie.coderemote.ui.screens.chat.messages.FileCard
 import dev.mackenzie.coderemote.ui.screens.chat.messages.ImageThumbnailRow
 import dev.mackenzie.coderemote.ui.screens.chat.ui.ChatInputBar
 import dev.mackenzie.coderemote.ui.screens.chat.ui.ChatInputMode
@@ -1846,7 +1847,6 @@ fun ChatScreen(
     }
     } // CompositionLocalProvider
 }
-
 /**
  * Determine the "status text" for a group of step parts (like WebUI).
  * E.g., "Making edits", "Running commands", "Searching codebase", "Thinking"
@@ -3970,62 +3970,6 @@ private fun PatchCard(patch: Part.Patch) {
                     }
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun FileCard(file: Part.File) {
-    // Images are handled by ImageThumbnailRow, so FileCard only handles non-image files
-    FileCardFallback(file)
-}
-
-@Composable
-private fun FileCardFallback(file: Part.File) {
-    val isAmoled = isAmoledTheme()
-    val containerColor = if (isAmoled) {
-        Color.Black
-    } else {
-        MaterialTheme.colorScheme.surfaceContainerLow
-    }
-    val borderColor = if (isAmoled) {
-        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.75f)
-    } else {
-        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.9f)
-    }
-    val contentColor = if (isAmoled) {
-        MaterialTheme.colorScheme.onSurface
-    } else {
-        MaterialTheme.colorScheme.onSurface
-    }
-
-    Surface(
-        shape = RoundedCornerShape(12.dp),
-        color = containerColor,
-        border = BorderStroke(1.dp, borderColor),
-        tonalElevation = 0.dp,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                Icons.Default.AttachFile,
-                contentDescription = null,
-                modifier = Modifier.size(16.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                text = file.filename
-                    ?: file.url?.trimEnd('/')?.substringAfterLast('/')?.takeIf { it.isNotBlank() }
-                    ?: file.mime,
-                style = MaterialTheme.typography.bodyMedium,
-                color = contentColor,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
         }
     }
 }
