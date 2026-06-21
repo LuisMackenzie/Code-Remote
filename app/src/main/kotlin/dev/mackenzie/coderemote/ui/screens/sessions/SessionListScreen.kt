@@ -103,6 +103,18 @@ fun SessionListScreen(
     var showOpenProject by remember { mutableStateOf(false) }
     var showQuickNewSession by remember { mutableStateOf(false) }
 
+    var selectedProjectDirectory by remember { mutableStateOf<String?>(null) }
+
+    // Clear a stale filter when the selected directory no longer has any
+    // sessions (e.g. after reload or delete), so the user is not stranded
+    // on a generic empty screen.
+    LaunchedEffect(selectedProjectDirectory, uiState.sessionGroups) {
+        val dir = selectedProjectDirectory ?: return@LaunchedEffect
+        if (!hasSessionWithDirectory(uiState.sessionGroups, dir)) {
+            selectedProjectDirectory = null
+        }
+    }
+
     BackHandler(enabled = uiState.isSelectionMode) {
         viewModel.clearSelection()
     }
@@ -201,7 +213,11 @@ fun SessionListScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            val allSessions = uiState.sessionGroups.flatMap { it.sessions }
+            val displayedSessionGroups = filterSessionGroupsByDirectory(
+                uiState.sessionGroups,
+                selectedProjectDirectory
+            )
+            val allSessions = displayedSessionGroups.flatMap { it.sessions }
             when {
                 uiState.isLoading && allSessions.isEmpty() -> {
                     PulsingDotsIndicator(
@@ -266,14 +282,16 @@ fun SessionListScreen(
                         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        for (group in uiState.sessionGroups) {
+                        for (group in displayedSessionGroups) {
                             items(group.sessions, key = { it.session.id }) { item ->
                                 val untitledLabel = stringResource(R.string.session_untitled)
                                 val dirLabel = group.sessionDirLabels[item.session.id]
                                     ?: group.directory.ifEmpty { group.projectName }
+                                val workingDirectory = normalizedSessionDirectory(item.session.directory)
                                 SessionRow(
                                     item = item,
                                     projectName = dirLabel,
+                                    isProjectNameFiltered = selectedProjectDirectory == workingDirectory,
                                     isSelectionMode = uiState.isSelectionMode,
                                     isSelected = item.session.id in uiState.selectedIds,
                                     onClick = {
@@ -284,6 +302,12 @@ fun SessionListScreen(
                                         }
                                     },
                                     onLongClick = { viewModel.toggleSelection(item.session.id) },
+                                    onProjectNameClick = {
+                                        selectedProjectDirectory = toggleProjectDirectoryFilter(
+                                            current = selectedProjectDirectory,
+                                            workingDirectory = workingDirectory
+                                        )
+                                    },
                                     onRename = {
                                         renameSessionId = item.session.id
                                         renameText = item.session.title ?: ""
@@ -460,6 +484,59 @@ fun SessionListScreen(
             }
         }
     }
+}
+
+private fun normalizedSessionDirectory(directory: String): String =
+    directory.trimEnd('/').ifEmpty { "/" }
+
+/**
+ * Returns the leaf project name used for the clickable project title on a
+ * [SessionRow]. Derived from the normalized working directory so directories
+ * with a trailing slash (e.g. `/home/user/code-remote/`) still resolve to
+ * `code-remote` instead of a blank leaf. Returns null when the directory has
+ * no usable leaf (e.g. root `/` or empty), in which case the title is not
+ * rendered — matching the previous guard behavior for non-trailing-slash roots.
+ */
+internal fun projectTitleFromDirectory(directory: String): String? {
+    val leaf = directory.trimEnd('/').substringAfterLast('/')
+    return leaf.takeIf { it.isNotBlank() }
+}
+
+/**
+ * Returns [groups] filtered to sessions whose normalized working directory
+ * matches [directory]. When [directory] is null the filter is cleared and
+ * the original groups are returned unchanged.
+ */
+internal fun filterSessionGroupsByDirectory(
+    groups: List<ProjectSessionGroup>,
+    directory: String?
+): List<ProjectSessionGroup> = directory?.let { dir ->
+    groups.mapNotNull { group ->
+        val filtered = group.sessions.filter { normalizedSessionDirectory(it.session.directory) == dir }
+        group.copy(sessions = filtered).takeIf { filtered.isNotEmpty() }
+    }
+} ?: groups
+
+/**
+ * Returns the next value for the project-directory filter when the user taps
+ * a project title: selects [workingDirectory] when nothing is selected, or
+ * clears the filter (null) when the same directory is tapped again.
+ */
+internal fun toggleProjectDirectoryFilter(
+    current: String?,
+    workingDirectory: String
+): String? = if (current == workingDirectory) null else workingDirectory
+
+/**
+ * Returns true when at least one session in [groups] has a normalized working
+ * directory matching [directory]. Used to detect a stale filter after a
+ * reload/delete so the screen can clear it instead of showing an empty list.
+ */
+internal fun hasSessionWithDirectory(
+    groups: List<ProjectSessionGroup>,
+    directory: String
+): Boolean = groups.any { group ->
+    group.sessions.any { normalizedSessionDirectory(it.session.directory) == directory }
 }
 
 @Composable
@@ -1137,10 +1214,12 @@ private fun NewSessionQuickDialog(
 private fun SessionRow(
     item: SessionItem,
     projectName: String? = null,
+    isProjectNameFiltered: Boolean,
     isSelectionMode: Boolean,
     isSelected: Boolean,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
+    onProjectNameClick: () -> Unit,
     onRename: () -> Unit,
     onDelete: () -> Unit
 ) {
@@ -1224,7 +1303,8 @@ private fun SessionRow(
 
                     // Project Name
                     Row() {
-                        if (item.session.directory.substringAfterLast("/").isNotBlank()) {
+                        val projectTitle = projectTitleFromDirectory(item.session.directory)
+                        if (!projectTitle.isNullOrBlank()) {
                             Text(
                                 text = stringResource(R.string.project_name_title) + " ",
                                 maxLines = 1,
@@ -1232,23 +1312,20 @@ private fun SessionRow(
                                 style = MaterialTheme.typography.labelSmall
                             )
                             Text(
-                                text = item.session.directory.substringAfterLast("/"),
+                                text = projectTitle,
                                 modifier = Modifier
                                     .clickable(
-                                        onClick = {
-                                            /*TODO*/
-                                            Toast.makeText(
-                                                ctx,
-                                                "Proyecto: ${item.session.directory.substringAfterLast("/")}",
-                                                Toast.LENGTH_SHORT
-                                            ).show()
-                                        }
+                                        onClick = onProjectNameClick
                                     ),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                                 style = MaterialTheme.typography.labelSmall,
                                 textDecoration = TextDecoration.Underline,
-                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
+                                color = if (isProjectNameFiltered) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
+                                }
                             )
                         }
                         Spacer(modifier = Modifier.height(2.dp))
