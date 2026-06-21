@@ -151,7 +151,11 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
-    androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
+    // Explicit espresso-core for connected Compose tests on API 35+/36; not
+    // referenced directly by androidTest sources (Compose UI tests use
+    // androidx.compose.ui:ui-test-junit4). Do not remove without confirming
+    // androidTest still compiles/runs on those levels.
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.7.0")
     androidTestImplementation(composeBom)
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
 }
