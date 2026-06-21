@@ -3,8 +3,6 @@ package dev.mackenzie.coderemote.ui.screens.chat
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.scrollBy
@@ -62,6 +60,7 @@ import dev.mackenzie.coderemote.R
 import androidx.compose.ui.res.stringResource
 import dev.mackenzie.coderemote.ui.components.PulsingDotsIndicator
 import dev.mackenzie.coderemote.ui.screens.chat.messages.ChatMessageBubble
+import dev.mackenzie.coderemote.ui.screens.chat.messages.CompactionTriggerMessage
 import dev.mackenzie.coderemote.ui.screens.chat.ui.ChatInputBar
 import dev.mackenzie.coderemote.ui.screens.chat.ui.ChatInputMode
 import dev.mackenzie.coderemote.ui.screens.chat.ui.ImageAttachment
@@ -1565,64 +1564,17 @@ fun ChatScreen(
                             // Show compact system-style divider for compaction triggers
                             // Long-press to revert (undo compaction and subsequent messages)
                             if (isCompactionTrigger) {
-                                var showRevertDialog by remember { mutableStateOf(false) }
-
-                                if (showRevertDialog) {
-                                    AlertDialog(
-                                        onDismissRequest = { showRevertDialog = false },
-                                        title = { Text(stringResource(R.string.chat_revert_title)) },
-                                        text = { Text(stringResource(R.string.chat_revert_message)) },
-                                        confirmButton = {
-                                            TextButton(
-                                                onClick = {
-                                                    showRevertDialog = false
-                                                    viewModel.revertMessage(chatMessage.message.id) { ok ->
-                                                        coroutineScope.launch {
-                                                            snackbarHostState.showSnackbar(
-                                                                if (ok) context.getString(R.string.chat_message_reverted) else context.getString(R.string.chat_message_revert_failed)
-                                                            )
-                                                        }
-                                                    }
-                                                }
-                                            ) {
-                                                Text(stringResource(R.string.chat_revert), color = MaterialTheme.colorScheme.error)
-                                            }
-                                        },
-                                        dismissButton = {
-                                            TextButton(onClick = { showRevertDialog = false }) {
-                                                Text(stringResource(R.string.cancel))
+                                CompactionTriggerMessage(
+                                    onRevert = {
+                                        viewModel.revertMessage(chatMessage.message.id) { ok ->
+                                            coroutineScope.launch {
+                                                snackbarHostState.showSnackbar(
+                                                    if (ok) context.getString(R.string.chat_message_reverted) else context.getString(R.string.chat_message_revert_failed)
+                                                )
                                             }
                                         }
-                                    )
-                                }
-
-                                @OptIn(ExperimentalFoundationApi::class)
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .combinedClickable(
-                                            onClick = { },
-                                            onLongClick = { showRevertDialog = true }
-                                        )
-                                        .padding(vertical = 4.dp, horizontal = 32.dp),
-                                    horizontalArrangement = Arrangement.Center,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    HorizontalDivider(
-                                        modifier = Modifier.weight(1f),
-                                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
-                                    )
-                                    Text(
-                                        text = stringResource(R.string.chat_summarized),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                                        modifier = Modifier.padding(horizontal = 12.dp)
-                                    )
-                                    HorizontalDivider(
-                                        modifier = Modifier.weight(1f),
-                                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
-                                    )
-                                }
+                                    }
+                                )
                                 return@items
                             }
 
