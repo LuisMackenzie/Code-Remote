@@ -68,6 +68,19 @@ data class SessionItem(
     val status: SessionStatus = SessionStatus.Idle
 )
 
+/**
+ * Prunes [selectedIds] so it never contains IDs outside [visibleIds].
+ *
+ * This enforces the safety rule that no hidden session can remain selected —
+ * and therefore be deleted via Delete Selected — after a project filter
+ * narrows the visible set. Pure on purpose so the rule can be exercised by a
+ * focused JVM test without a ViewModel or instrumented UI.
+ */
+internal fun pruneSelectionToVisible(
+    selectedIds: Set<String>,
+    visibleIds: Set<String>,
+): Set<String> = selectedIds.intersect(visibleIds)
+
 @HiltViewModel
 class SessionListViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
@@ -283,11 +296,34 @@ class SessionListViewModel @Inject constructor(
         _selectedIds.value = emptySet()
     }
 
-    fun selectAll() {
-        val allIds = uiState.value.sessionGroups
-            .flatMap { group -> group.sessions.map { it.session.id } }
-            .toSet()
-        _selectedIds.value = allIds
+    /**
+     * Constrains the current selection to [visibleIds], dropping any selected
+     * session ID that is no longer visible.
+     *
+     * The screen calls this whenever the filter-respecting visible set changes
+     * (e.g. a project filter is applied while selection mode is active) so that
+     * Delete Selected can never act on sessions the user cannot see. With no
+     * filter active [visibleIds] is the full session set, so this is a no-op
+     * and the pre-filter selection behavior is preserved.
+     */
+    fun retainSelection(visibleIds: Set<String>) {
+        val current = _selectedIds.value
+        val pruned = pruneSelectionToVisible(current, visibleIds)
+        if (pruned != current) {
+            _selectedIds.value = pruned
+        }
+    }
+
+    /**
+     * Replaces the current selection with exactly [sessionIds].
+     *
+     * The screen passes the IDs derived from the filter-respecting
+     * `displayedSessionGroups` so Select All under an active project filter
+     * selects only the sessions the user can see, never hidden sessions from
+     * other directories that could then be deleted via Delete Selected.
+     */
+    fun selectAll(sessionIds: Set<String>) {
+        _selectedIds.value = sessionIds
     }
 
     fun deleteSelected() {

@@ -115,8 +115,37 @@ fun SessionListScreen(
         }
     }
 
-    BackHandler(enabled = uiState.isSelectionMode) {
-        viewModel.clearSelection()
+    val isProjectFilterActive = selectedProjectDirectory != null
+
+    // Derive the visible (filter-respecting) session groups and IDs once so
+    // both the selection toolbar's Select All action and the body list
+    // operate on the same set of sessions. Without this, Select All would
+    // read the unfiltered sessionGroups inside the ViewModel and could
+    // select — and then delete via Delete Selected — sessions the user
+    // cannot see while a project filter is active.
+    val displayedSessionGroups = filterSessionGroupsByDirectory(
+        uiState.sessionGroups,
+        selectedProjectDirectory
+    )
+    val visibleIds = visibleSessionIds(displayedSessionGroups)
+
+    // Safety: prune any selected IDs that are no longer visible whenever the
+    // filter (or the underlying sessions) change. Without this, a user could
+    // select sessions with no filter, apply a project filter, and then delete
+    // the now-hidden sessions via Delete Selected because the ViewModel's
+    // _selectedIds still held IDs outside the visible set. With no filter
+    // active visibleIds is the full session set, so retainSelection is a
+    // no-op and the pre-filter selection behavior is preserved.
+    LaunchedEffect(visibleIds) {
+        viewModel.retainSelection(visibleIds)
+    }
+
+    BackHandler(enabled = uiState.isSelectionMode || isProjectFilterActive) {
+        when (sessionListBackAction(uiState.isSelectionMode, isProjectFilterActive)) {
+            SessionListBackAction.ClearSelection -> viewModel.clearSelection()
+            SessionListBackAction.ClearProjectFilter -> selectedProjectDirectory = null
+            SessionListBackAction.NavigateBack -> onNavigateBack()
+        }
     }
 
     Scaffold(
@@ -135,7 +164,7 @@ fun SessionListScreen(
                         }
                     },
                     actions = {
-                        TextButton(onClick = { viewModel.selectAll() }) {
+                        TextButton(onClick = { viewModel.selectAll(visibleIds) }) {
                             Text(stringResource(R.string.sessions_select_all))
                         }
                         IconButton(onClick = { showDeleteSelectedDialog = true }) {
@@ -151,21 +180,15 @@ fun SessionListScreen(
                     )
                 )
             } else {
-                TopAppBar(
-                    title = {
-                        Column {
-                            Text(
-                                text = uiState.serverName.ifEmpty { stringResource(R.string.sessions_title) },
-                                style = MaterialTheme.typography.titleMedium
-                            )
-                        }
-                    },
-                    navigationIcon = {
-                        IconButton(onClick = onNavigateBack) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
-                        }
-                    },
-                    actions = {}
+                SessionListTopAppBar(
+                    title = sessionListToolbarTitle(
+                        selectedProjectDirectory = selectedProjectDirectory,
+                        serverName = uiState.serverName,
+                        defaultTitle = stringResource(R.string.sessions_title)
+                    ),
+                    filterActive = isProjectFilterActive,
+                    onNavigateBack = onNavigateBack,
+                    onClearProjectFilter = { selectedProjectDirectory = null }
                 )
             }
         },
@@ -213,10 +236,6 @@ fun SessionListScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            val displayedSessionGroups = filterSessionGroupsByDirectory(
-                uiState.sessionGroups,
-                selectedProjectDirectory
-            )
             val allSessions = displayedSessionGroups.flatMap { it.sessions }
             when {
                 uiState.isLoading && allSessions.isEmpty() -> {
@@ -503,6 +522,22 @@ internal fun projectTitleFromDirectory(directory: String): String? {
 }
 
 /**
+ * Returns the toolbar title for the session list screen.
+ *
+ * When a project filter is active the title is the selected project name
+ * (the leaf of the working directory), falling back to the raw directory
+ * when no usable leaf exists. When no filter is active the title falls back
+ * to [serverName] or [defaultTitle].
+ */
+internal fun sessionListToolbarTitle(
+    selectedProjectDirectory: String?,
+    serverName: String,
+    defaultTitle: String
+): String = selectedProjectDirectory?.let { directory ->
+    projectTitleFromDirectory(directory) ?: directory
+} ?: serverName.ifEmpty { defaultTitle }
+
+/**
  * Returns [groups] filtered to sessions whose normalized working directory
  * matches [directory]. When [directory] is null the filter is cleared and
  * the original groups are returned unchanged.
@@ -516,6 +551,17 @@ internal fun filterSessionGroupsByDirectory(
         group.copy(sessions = filtered).takeIf { filtered.isNotEmpty() }
     }
 } ?: groups
+
+/**
+ * Returns the set of session IDs contained in [groups].
+ *
+ * The screen derives the IDs it passes to [SessionListViewModel.selectAll]
+ * from the filter-respecting `displayedSessionGroups` via this helper, so
+ * Select All under an active project filter selects only the sessions the
+ * user can actually see — never hidden sessions from other directories.
+ */
+internal fun visibleSessionIds(groups: List<ProjectSessionGroup>): Set<String> =
+    groups.flatMap { group -> group.sessions.map { it.session.id } }.toSet()
 
 /**
  * Returns the next value for the project-directory filter when the user taps
@@ -537,6 +583,81 @@ internal fun hasSessionWithDirectory(
     directory: String
 ): Boolean = groups.any { group ->
     group.sessions.any { normalizedSessionDirectory(it.session.directory) == directory }
+}
+
+/**
+ * Decides what the system/back button should do on the SessionListScreen, in
+ * priority order:
+ *   1. If selection mode is active, clear the selection.
+ *   2. Else if a project filter is active, clear the filter.
+ *   3. Otherwise, navigate back.
+ *
+ * Returning a [SessionListBackAction] keeps the dispatch pure and unit-testable
+ * without instrumented UI or a ViewModel. The screen wires it into its
+ * [BackHandler]; branch 3 is the documented contract for the no-selection /
+ * no-filter case (handled by the system back stack when the handler is
+ * disabled, but exposed here so callers can route it explicitly if needed).
+ */
+internal sealed interface SessionListBackAction {
+    object ClearSelection : SessionListBackAction
+    object ClearProjectFilter : SessionListBackAction
+    object NavigateBack : SessionListBackAction
+}
+
+internal fun sessionListBackAction(
+    isSelectionMode: Boolean,
+    isProjectFilterActive: Boolean,
+): SessionListBackAction = when {
+    isSelectionMode -> SessionListBackAction.ClearSelection
+    isProjectFilterActive -> SessionListBackAction.ClearProjectFilter
+    else -> SessionListBackAction.NavigateBack
+}
+
+/**
+ * Top app bar for the session list when the toolbar is not in selection mode.
+ *
+ * Extracted from [SessionListScreen] so the filter-active vs. inactive toolbar
+ * behavior (title text, navigation icon, click routing) can be exercised by an
+ * Android Compose UI test without spinning up Hilt or [SessionListViewModel].
+ *
+ * When [filterActive] is true the navigation icon is a close ("X") button that
+ * invokes [onClearProjectFilter]; otherwise it is a back arrow that invokes
+ * [onNavigateBack]. The caller supplies [title] (typically via
+ * [sessionListToolbarTitle]) so this composable stays a pure function of its
+ * inputs.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun SessionListTopAppBar(
+    title: String,
+    filterActive: Boolean,
+    onNavigateBack: () -> Unit,
+    onClearProjectFilter: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    TopAppBar(
+        modifier = modifier,
+        title = {
+            Column {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium
+                )
+            }
+        },
+        navigationIcon = {
+            if (filterActive) {
+                IconButton(onClick = onClearProjectFilter) {
+                    Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close))
+                }
+            } else {
+                IconButton(onClick = onNavigateBack) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
+                }
+            }
+        },
+        actions = {}
+    )
 }
 
 @Composable
