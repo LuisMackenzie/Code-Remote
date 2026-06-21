@@ -459,6 +459,8 @@
     <string name="share_send_image_to">Send image to…</string>
     <string name="share_no_connected_servers">No connected servers</string>
     <string name="share_connect_first">Connect to a server first, then share images</string>
+    <string name="project_name_title">Project:</string>
+    <string name="project_directory_title">Working directory:</string>
 
     <!-- Chat pagination -->
     <string name="chat_load_earlier">Load earlier messages</string>

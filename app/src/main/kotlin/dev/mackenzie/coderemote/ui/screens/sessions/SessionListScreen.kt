@@ -1,5 +1,6 @@
 package dev.mackenzie.coderemote.ui.screens.sessions
 
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -43,6 +44,10 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.activity.compose.BackHandler
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.hilt.navigation.compose.hiltViewModel
 import dev.mackenzie.coderemote.data.api.FileNode
 import dev.mackenzie.coderemote.domain.model.Project
@@ -1144,6 +1149,7 @@ private fun SessionRow(
 
     val addColor = Color(0xFF4CAF50)
     val delColor = Color(0xFFE53935)
+    val ctx = LocalContext.current
 
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = { dismissValue ->
@@ -1215,15 +1221,66 @@ private fun SessionRow(
                 }
                 // Content column
                 Column(modifier = Modifier.weight(1f)) {
-                    // Project name label
-                    if (!projectName.isNullOrBlank()) {
-                        Text(
-                            text = projectName,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
-                        )
+
+                    // Project Name
+                    Row() {
+                        if (item.session.directory.substringAfterLast("/").isNotBlank()) {
+                            Text(
+                                text = stringResource(R.string.project_name_title) + " ",
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                            Text(
+                                text = item.session.directory.substringAfterLast("/"),
+                                modifier = Modifier
+                                    .clickable(
+                                        onClick = {
+                                            /*TODO*/
+                                            Toast.makeText(
+                                                ctx,
+                                                "Proyecto: ${item.session.directory.substringAfterLast("/")}",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
+                                    ),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                style = MaterialTheme.typography.labelSmall,
+                                textDecoration = TextDecoration.Underline,
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(2.dp))
+                    }
+
+                    // Project working directory
+                    Row() {
+                        if (!projectName.isNullOrBlank()) {
+                            Text(
+                                text = stringResource(R.string.project_directory_title) + " ",
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                            Text(
+                                text = projectName,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                                modifier = Modifier
+                                    .clickable(
+                                        onClick = {
+                                            Toast.makeText(
+                                                ctx,
+                                                "Working Dir: $projectName",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
+                                    ),
+                            )
+                        }
                         Spacer(modifier = Modifier.height(2.dp))
                     }
 
