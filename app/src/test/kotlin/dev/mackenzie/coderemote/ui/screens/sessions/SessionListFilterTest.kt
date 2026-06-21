@@ -19,6 +19,9 @@ import org.junit.Test
  * [projectTitleFromDirectory] covers the clickable project-title label shown
  * by `SessionRow`; it must agree with the normalization used by the filter
  * helpers so a trailing-slash directory still shows a clickable leaf.
+ *
+ * [sessionListToolbarTitle] drives the toolbar title: the selected project
+ * name while a filter is active, otherwise the server name/default title.
  */
 class SessionListFilterTest {
 
@@ -129,6 +132,120 @@ class SessionListFilterTest {
 
         val selected = toggleProjectDirectoryFilter(current = null, workingDirectory = workingDirectory)
         assertEquals(listOf("a"), ids(filterSessionGroupsByDirectory(groups, selected)))
+    }
+
+    @Test
+    fun `sessionListToolbarTitle returns server name when no project filter is active`() {
+        assertEquals(
+            "My Server",
+            sessionListToolbarTitle(
+                selectedProjectDirectory = null,
+                serverName = "My Server",
+                defaultTitle = "Sessions"
+            )
+        )
+    }
+
+    @Test
+    fun `sessionListToolbarTitle returns default title when no filter and server name is empty`() {
+        assertEquals(
+            "Sessions",
+            sessionListToolbarTitle(
+                selectedProjectDirectory = null,
+                serverName = "",
+                defaultTitle = "Sessions"
+            )
+        )
+    }
+
+    @Test
+    fun `sessionListToolbarTitle returns selected project leaf when filter is active`() {
+        assertEquals(
+            "code-remote",
+            sessionListToolbarTitle(
+                selectedProjectDirectory = "/home/user/code-remote",
+                serverName = "My Server",
+                defaultTitle = "Sessions"
+            )
+        )
+    }
+
+    @Test
+    fun `sessionListToolbarTitle ignores server name while project filter is active`() {
+        assertEquals(
+            "other-project",
+            sessionListToolbarTitle(
+                selectedProjectDirectory = "/home/user/other-project",
+                serverName = "My Server",
+                defaultTitle = "Sessions"
+            )
+        )
+    }
+
+    @Test
+    fun `sessionListToolbarTitle falls back to directory when no usable leaf exists`() {
+        // Root directories have no leaf; showing the raw directory keeps the
+        // title meaningful while the filter is active.
+        assertEquals(
+            "/",
+            sessionListToolbarTitle(
+                selectedProjectDirectory = "/",
+                serverName = "My Server",
+                defaultTitle = "Sessions"
+            )
+        )
+    }
+
+    @Test
+    fun `visibleSessionIds returns every session ID when no project filter is active`() {
+        // With no filter, the screen passes all session IDs to selectAll,
+        // preserving the pre-filter Select All behavior.
+        val groups = listOf(
+            group(
+                listOf(
+                    sessionItem("a", "/home/user/code-remote"),
+                    sessionItem("b", "/home/user/other-project"),
+                    sessionItem("c", "/home/user/code-remote/"),
+                )
+            )
+        )
+        val ids = visibleSessionIds(filterSessionGroupsByDirectory(groups, null))
+        assertEquals(setOf("a", "b", "c"), ids)
+    }
+
+    @Test
+    fun `visibleSessionIds returns only filtered session IDs when a project filter is active`() {
+        // Regression: Select All previously called viewModel.selectAll() with
+        // no argument, which read the unfiltered sessionGroups and selected
+        // every session — including hidden ones from other directories that
+        // could then be deleted. With a filter active on code-remote, Select
+        // All must only select the visible sessions a and c, never b.
+        val groups = listOf(
+            group(
+                listOf(
+                    sessionItem("a", "/home/user/code-remote"),
+                    sessionItem("b", "/home/user/other-project"),
+                    sessionItem("c", "/home/user/code-remote/"),
+                )
+            )
+        )
+        val ids = visibleSessionIds(
+            filterSessionGroupsByDirectory(groups, "/home/user/code-remote")
+        )
+        assertEquals(setOf("a", "c"), ids)
+    }
+
+    @Test
+    fun `visibleSessionIds is empty when the filter matches no sessions`() {
+        // A filter with no matches yields no visible IDs, so Select All
+        // selects nothing rather than sessions from other directories.
+        val groups = listOf(
+            group(listOf(sessionItem("a", "/home/user/code-remote")))
+        )
+        val ids = visibleSessionIds(
+            filterSessionGroupsByDirectory(groups, "/home/user/missing-project")
+        )
+        assertTrue(ids.isEmpty())
     }
 
     /**
