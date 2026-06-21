@@ -22,7 +22,6 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.ime
@@ -36,7 +35,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.text.selection.LocalTextSelectionColors
 import androidx.compose.foundation.text.selection.TextSelectionColors
@@ -47,14 +45,12 @@ import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 
 import androidx.compose.ui.layout.onSizeChanged
@@ -73,7 +69,6 @@ import androidx.compose.ui.platform.LocalTextToolbar
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.TextToolbar
 import androidx.compose.ui.platform.TextToolbarStatus
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -108,8 +103,6 @@ import dev.mackenzie.coderemote.MainActivity
 import dev.mackenzie.coderemote.ui.theme.CodeTypography
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -117,10 +110,7 @@ import kotlinx.serialization.json.contentOrNull
 
 import android.net.Uri
 import android.content.Intent
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.media.AudioManager
-import android.os.Build
 import android.os.SystemClock
 import android.util.Base64
 import android.util.Log
@@ -146,84 +136,6 @@ import dev.mackenzie.coderemote.ui.screens.chat.ui.RevertBanner
  * Chat Screen - conversation view with native markdown rendering.
  * Shows messages with streaming text rendered via mikepenz markdown renderer.
  */
-
-// ============ Chat Settings via CompositionLocal ============
-
-/** Chat font size setting: "small", "medium", "large". */
-val LocalChatFontSize = compositionLocalOf { "medium" }
-
-/** Whether code blocks use word wrap instead of horizontal scroll. */
-val LocalCodeWordWrap = compositionLocalOf { false }
-
-/** Whether compact message spacing is enabled. */
-val LocalCompactMessages = compositionLocalOf { false }
-
-/** Whether tool cards are collapsed by default. */
-val LocalCollapseTools = compositionLocalOf { false }
-
-/** Whether haptic feedback is enabled. */
-val LocalHapticFeedbackEnabled = compositionLocalOf { true }
-
-/** Image save request callback available to image preview composables. */
-val LocalImageSaveRequest = compositionLocalOf<(ByteArray, String, String?) -> Unit> { { _, _, _ -> } }
-
-@Composable
-internal fun isAmoledTheme(): Boolean {
-    val colors = MaterialTheme.colorScheme
-    return colors.background == Color.Black && colors.surface == Color.Black
-}
-
-@Composable
-private fun toolOutputContainerColor(isAmoled: Boolean): Color {
-    return when {
-        isAmoled -> Color.Black
-        isSystemInDarkTheme() -> MaterialTheme.colorScheme.secondaryContainer
-        else -> MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.82f)
-    }
-}
-
-/**
- * Perform a light haptic tick if haptic feedback is enabled.
- * Call from composable context or from a click lambda that has access to a View.
- */
-@Suppress("DEPRECATION")
-internal fun performHaptic(view: android.view.View, enabled: Boolean) {
-    if (enabled) {
-        view.performHapticFeedback(
-            android.view.HapticFeedbackConstants.CLOCK_TICK,
-            android.view.HapticFeedbackConstants.FLAG_IGNORE_VIEW_SETTING or
-                    android.view.HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING
-        )
-    }
-}
-
-/**
- * Conditionally applies horizontalScroll for code blocks.
- * When word wrap is enabled, no horizontal scroll is applied.
- */
-@Composable
-private fun Modifier.codeHorizontalScroll(): Modifier {
-    return if (!LocalCodeWordWrap.current) {
-        this.horizontalScroll(rememberScrollState())
-    } else {
-        this
-    }
-}
-
-/** Format a token count to a human-readable string (e.g., 1.2k, 45.3k, 1.2M). */
-private fun formatTokenCount(count: Int): String {
-    return when {
-        count >= 1_000_000 -> String.format("%.1fM", count / 1_000_000.0)
-        count >= 1_000 -> String.format("%.1fk", count / 1_000.0)
-        else -> count.toString()
-    }
-}
-
-private fun formatAssistantErrorMessage(error: Message.Assistant.ErrorInfo?): String? {
-    if (error == null) return null
-    val raw = error.message.ifBlank { error.name }
-    return raw.ifBlank { null }
-}
 
 private enum class HtmlErrorViewMode {
     Page,
@@ -324,254 +236,6 @@ private fun ErrorPayloadContent(
             }
         }
     }
-}
-
-/**
- * Splits raw input text into a list of [PromptPart] objects.
- * Text around confirmed @file mentions becomes type="text" parts,
- * and each @file mention becomes a type="file" part with a file:// URL.
- */
-private fun buildPromptParts(
-    text: String,
-    confirmedPaths: Set<String>,
-    sessionDirectory: String?
-): List<PromptPart> {
-    if (confirmedPaths.isEmpty()) {
-        val trimmed = text.trim()
-        return if (trimmed.isEmpty()) emptyList()
-        else listOf(PromptPart(type = "text", text = trimmed))
-    }
-
-    // Find all confirmed @path mentions with their positions
-    data class Mention(val start: Int, val end: Int, val path: String)
-    val mentions = mutableListOf<Mention>()
-
-    for (path in confirmedPaths) {
-        val needle = "@$path"
-        var searchFrom = 0
-        while (true) {
-            val idx = text.indexOf(needle, searchFrom)
-            if (idx == -1) break
-            val endIdx = idx + needle.length
-            // Boundary check: next char must be whitespace, end-of-string, or @
-            if (endIdx < text.length) {
-                val next = text[endIdx]
-                if (!next.isWhitespace() && next != '@') {
-                    searchFrom = endIdx
-                    continue
-                }
-            }
-            mentions.add(Mention(idx, endIdx, path))
-            searchFrom = endIdx
-        }
-    }
-
-    if (mentions.isEmpty()) {
-        val trimmed = text.trim()
-        return if (trimmed.isEmpty()) emptyList()
-        else listOf(PromptPart(type = "text", text = trimmed))
-    }
-
-    // Sort by position
-    mentions.sortBy { it.start }
-
-    val parts = mutableListOf<PromptPart>()
-    var cursor = 0
-
-    for (mention in mentions) {
-        // Add text before this mention
-        if (mention.start > cursor) {
-            val segment = text.substring(cursor, mention.start).trim()
-            if (segment.isNotEmpty()) {
-                parts.add(PromptPart(type = "text", text = segment))
-            }
-        }
-        // Add file part
-        val isDir = mention.path.endsWith("/")
-        val absPath = if (sessionDirectory != null) "$sessionDirectory/${mention.path}" else mention.path
-        val displayName = mention.path.trimEnd('/').substringAfterLast('/')
-        parts.add(
-            PromptPart(
-                type = "file",
-                path = mention.path,
-                mime = if (isDir) "application/x-directory" else "text/plain",
-                url = "file:///$absPath",
-                filename = displayName
-            )
-        )
-        cursor = mention.end
-    }
-
-    // Trailing text
-    if (cursor < text.length) {
-        val segment = text.substring(cursor).trim()
-        if (segment.isNotEmpty()) {
-            parts.add(PromptPart(type = "text", text = segment))
-        }
-    }
-
-    return parts
-}
-
-private data class ImageSaveRequest(
-    val bytes: ByteArray,
-    val mime: String,
-    val filename: String,
-)
-
-private fun decodePartFileBytes(file: Part.File): ByteArray? {
-    val url = file.url ?: return null
-    val encoded = if (url.contains(',')) url.substringAfter(',') else url
-    if (encoded.isBlank()) return null
-    return try {
-        Base64.decode(encoded, Base64.DEFAULT)
-    } catch (_: Exception) {
-        null
-    }
-}
-
-private fun extensionForMime(mime: String): String {
-    return when (mime.lowercase()) {
-        "image/jpeg", "image/jpg" -> "jpg"
-        "image/png" -> "png"
-        "image/webp" -> "webp"
-        "image/gif" -> "gif"
-        else -> "img"
-    }
-}
-
-private data class PreparedAttachment(
-    val attachment: ImageAttachment,
-    val comparison: AttachmentComparison? = null
-)
-
-private data class AttachmentComparison(
-    val originalBytes: Int,
-    val optimizedBytes: Int,
-    val originalEstimatedTokens: Int,
-    val optimizedEstimatedTokens: Int
-)
-
-private fun estimateVisionTokens(width: Int, height: Int): Int {
-    if (width <= 0 || height <= 0) return 0
-    return ((width.toLong() * height.toLong()) / 750.0).toInt()
-}
-
-private fun formatFileSize(bytes: Int): String {
-    val value = bytes.toDouble()
-    return when {
-        value >= 1024.0 * 1024.0 -> String.format("%.2f MB", value / (1024.0 * 1024.0))
-        value >= 1024.0 -> String.format("%.1f KB", value / 1024.0)
-        else -> "$bytes B"
-    }
-}
-
-private suspend fun buildAttachmentFromUri(
-    contentResolver: android.content.ContentResolver,
-    uri: Uri,
-    compressImages: Boolean,
-    maxLongSidePx: Int = 1440,
-    webpQuality: Int = 60
-): PreparedAttachment? = withContext(Dispatchers.IO) {
-    val mimeType = contentResolver.getType(uri) ?: "image/png"
-    val acceptedTypes = setOf("image/png", "image/jpeg", "image/gif", "image/webp", "application/pdf")
-    if (mimeType !in acceptedTypes) return@withContext null
-
-    val bytes = contentResolver.openInputStream(uri)?.use { it.readBytes() } ?: return@withContext null
-    val originalFilename = uri.lastPathSegment?.substringAfterLast('/') ?: "image.png"
-
-    val shouldOptimize = compressImages && (mimeType == "image/png" || mimeType == "image/jpeg")
-    if (!shouldOptimize) {
-        val base64 = Base64.encodeToString(bytes, Base64.NO_WRAP)
-        return@withContext PreparedAttachment(
-            attachment = ImageAttachment(
-                uri = uri,
-                mime = mimeType,
-                filename = originalFilename,
-                dataUrl = "data:$mimeType;base64,$base64"
-            )
-        )
-    }
-
-    val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-    if (bitmap == null) {
-        val base64 = Base64.encodeToString(bytes, Base64.NO_WRAP)
-        return@withContext PreparedAttachment(
-            attachment = ImageAttachment(
-                uri = uri,
-                mime = mimeType,
-                filename = originalFilename,
-                dataUrl = "data:$mimeType;base64,$base64"
-            )
-        )
-    }
-
-    val srcWidth = bitmap.width
-    val srcHeight = bitmap.height
-    val longSide = maxOf(srcWidth, srcHeight)
-    val resizeEnabled = maxLongSidePx > 0
-    val scale = if (resizeEnabled && longSide > maxLongSidePx) {
-        maxLongSidePx.toFloat() / longSide.toFloat()
-    } else {
-        1f
-    }
-    val outWidth = (srcWidth * scale).toInt().coerceAtLeast(1)
-    val outHeight = (srcHeight * scale).toInt().coerceAtLeast(1)
-    val resizedBitmap = if (scale < 1f) Bitmap.createScaledBitmap(bitmap, outWidth, outHeight, true) else bitmap
-
-    val output = java.io.ByteArrayOutputStream()
-    @Suppress("DEPRECATION")
-    val format = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-        Bitmap.CompressFormat.WEBP_LOSSY
-    } else {
-        Bitmap.CompressFormat.WEBP
-    }
-    val compressed = resizedBitmap.compress(format, webpQuality.coerceIn(1, 100), output)
-    if (resizedBitmap !== bitmap) {
-        resizedBitmap.recycle()
-    }
-    bitmap.recycle()
-
-    if (!compressed) {
-        val base64 = Base64.encodeToString(bytes, Base64.NO_WRAP)
-        return@withContext PreparedAttachment(
-            attachment = ImageAttachment(
-                uri = uri,
-                mime = mimeType,
-                filename = originalFilename,
-                dataUrl = "data:$mimeType;base64,$base64"
-            )
-        )
-    }
-
-    val webpBytes = output.toByteArray()
-    if (scale >= 0.999f && webpBytes.size >= bytes.size) {
-        val base64 = Base64.encodeToString(bytes, Base64.NO_WRAP)
-        return@withContext PreparedAttachment(
-            attachment = ImageAttachment(
-                uri = uri,
-                mime = mimeType,
-                filename = originalFilename,
-                dataUrl = "data:$mimeType;base64,$base64"
-            )
-        )
-    }
-    val base64 = Base64.encodeToString(webpBytes, Base64.NO_WRAP)
-    val optimizedFilename = originalFilename.substringBeforeLast('.', originalFilename) + ".webp"
-    return@withContext PreparedAttachment(
-        attachment = ImageAttachment(
-            uri = uri,
-            mime = "image/webp",
-            filename = optimizedFilename,
-            dataUrl = "data:image/webp;base64,$base64"
-        ),
-        comparison = AttachmentComparison(
-            originalBytes = bytes.size,
-            optimizedBytes = webpBytes.size,
-            originalEstimatedTokens = estimateVisionTokens(srcWidth, srcHeight),
-            optimizedEstimatedTokens = estimateVisionTokens(outWidth, outHeight)
-        )
-    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
