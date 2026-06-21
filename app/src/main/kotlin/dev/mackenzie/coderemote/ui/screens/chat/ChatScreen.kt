@@ -68,7 +68,6 @@ import dev.mackenzie.coderemote.data.api.PromptPart
 import dev.mackenzie.coderemote.MainActivity
 import dev.mackenzie.coderemote.ui.theme.CodeTypography
 import kotlinx.coroutines.launch
-import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.contentOrNull
@@ -87,6 +86,7 @@ import dev.mackenzie.coderemote.ui.screens.chat.messages.FileCard
 import dev.mackenzie.coderemote.ui.screens.chat.messages.ImageThumbnailRow
 import dev.mackenzie.coderemote.ui.screens.chat.messages.PatchCard
 import dev.mackenzie.coderemote.ui.screens.chat.messages.ReasoningBlock
+import dev.mackenzie.coderemote.ui.screens.chat.messages.TodoListCard
 import dev.mackenzie.coderemote.ui.screens.chat.ui.ChatInputBar
 import dev.mackenzie.coderemote.ui.screens.chat.ui.ChatInputMode
 import dev.mackenzie.coderemote.ui.screens.chat.ui.ImageAttachment
@@ -2552,7 +2552,7 @@ private fun MarkdownContent(
 }
 
 @Composable
-private fun ToolCallCard(tool: Part.Tool) {
+internal fun ToolCallCard(tool: Part.Tool) {
     val isAmoled = isAmoledTheme()
     val stateColor = when (tool.state) {
         is ToolState.Pending -> MaterialTheme.colorScheme.outline
@@ -3679,157 +3679,5 @@ private fun TaskToolCard(tool: Part.Tool) {
                 }
             }
         }
-    }
-}
-@Composable
-private fun TodoListCard(tool: Part.Tool) {
-    val isAmoled = isAmoledTheme()
-    // Extract todos from metadata first, then fall back to input
-    val todos = remember(tool) {
-        val source = when (val state = tool.state) {
-            is ToolState.Completed -> state.metadata?.get("todos") ?: state.input["todos"]
-            is ToolState.Running -> state.metadata?.get("todos") ?: state.input["todos"]
-            is ToolState.Pending -> state.input["todos"]
-            is ToolState.Error -> state.metadata?.get("todos") ?: state.input["todos"]
-        }
-        if (source != null) {
-            try {
-                source.jsonArray.mapNotNull { element ->
-                    try {
-                        val obj = element.jsonObject
-                        val content = obj["content"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
-                        val status = obj["status"]?.jsonPrimitive?.contentOrNull ?: "pending"
-                        val priority = obj["priority"]?.jsonPrimitive?.contentOrNull ?: "medium"
-                        TodoItem(content = content, status = status, priority = priority)
-                    } catch (_: Exception) { null }
-                }
-            } catch (_: Exception) { emptyList() }
-        } else {
-            emptyList()
-        }
-    }
-
-    if (todos.isEmpty()) {
-        // Fallback to generic tool card if we can't parse todos
-        ToolCallCard(tool = tool)
-        return
-    }
-
-    val completedCount = todos.count { it.status == "completed" }
-    val totalCount = todos.size
-    var expanded by remember { mutableStateOf(true) }
-    val hapticView = LocalView.current
-    val hapticOn = LocalHapticFeedbackEnabled.current
-
-    Surface(
-        shape = RoundedCornerShape(8.dp),
-        color = if (isAmoled) Color.Black else MaterialTheme.colorScheme.surface,
-        border = if (isAmoled) BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.65f)) else null,
-        tonalElevation = if (isAmoled) 0.dp else 1.dp,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(modifier = Modifier.padding(8.dp)) {
-            // Header row
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { performHaptic(hapticView, hapticOn); expanded = !expanded },
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Checklist,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                        tint = if (completedCount == totalCount) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        }
-                    )
-                    Text(
-                        text = stringResource(R.string.chat_tasks_label),
-                        style = MaterialTheme.typography.labelMedium
-                    )
-                }
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "$completedCount/$totalCount",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                    )
-                    Icon(
-                        imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                        contentDescription = if (expanded) stringResource(R.string.chat_collapse) else stringResource(R.string.chat_expand),
-                        modifier = Modifier.size(16.dp),
-                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                    )
-                }
-            }
-
-            // Todo items
-            AnimatedVisibility(visible = expanded) {
-                Column(
-                    modifier = Modifier.padding(top = 4.dp),
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
-                ) {
-                    for (todo in todos) {
-                        TodoItemRow(todo = todo)
-                    }
-                }
-            }
-        }
-    }
-}
-
-private data class TodoItem(
-    val content: String,
-    val status: String,
-    val priority: String
-)
-
-@Composable
-private fun TodoItemRow(todo: TodoItem) {
-    val isCompleted = todo.status == "completed"
-    val isInProgress = todo.status == "in_progress"
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 2.dp),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Checkbox(
-            checked = isCompleted,
-            onCheckedChange = null,
-            modifier = Modifier.size(20.dp),
-            colors = CheckboxDefaults.colors(
-                checkedColor = MaterialTheme.colorScheme.primary,
-                uncheckedColor = if (isInProgress) {
-                    MaterialTheme.colorScheme.tertiary
-                } else {
-                    MaterialTheme.colorScheme.outline
-                }
-            )
-        )
-        Text(
-            text = todo.content,
-            style = MaterialTheme.typography.bodySmall.copy(
-                color = if (isCompleted) {
-                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
-                } else {
-                    MaterialTheme.colorScheme.onSurface
-                }
-            ),
-            modifier = Modifier.weight(1f)
-        )
     }
 }
