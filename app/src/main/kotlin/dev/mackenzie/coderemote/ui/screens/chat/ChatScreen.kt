@@ -63,6 +63,7 @@ import dev.mackenzie.coderemote.ui.screens.chat.messages.ChatMessageBubble
 import dev.mackenzie.coderemote.ui.screens.chat.messages.CompactionTriggerMessage
 import dev.mackenzie.coderemote.ui.screens.chat.ui.ChatEmptyOrErrorContent
 import dev.mackenzie.coderemote.ui.screens.chat.ui.ChatInputBar
+import dev.mackenzie.coderemote.ui.screens.chat.ui.ChatTopAppBar
 import dev.mackenzie.coderemote.ui.screens.chat.ui.ChatInputMode
 import dev.mackenzie.coderemote.ui.screens.chat.ui.ImageAttachment
 import dev.mackenzie.coderemote.ui.screens.chat.ui.ModelPickerDialog
@@ -112,7 +113,6 @@ fun ChatScreen(
     val listState = rememberLazyListState()
     var showModelPicker by remember { mutableStateOf(false) }
     var showRenameDialog by remember { mutableStateOf(false) }
-    var showMenu by remember { mutableStateOf(false) }
     var isTerminalMode by rememberSaveable { mutableStateOf(startInTerminalMode) }
     var terminalCtrlLatched by rememberSaveable { mutableStateOf(false) }
     var terminalAltLatched by rememberSaveable { mutableStateOf(false) }
@@ -677,210 +677,80 @@ fun ChatScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             if (!isTerminalMode) {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(
-                            text = uiState.sessionTitle,
-                            style = MaterialTheme.typography.titleMedium,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        // Subtitle: total tokens and cost for the session
-                        val totalTokens = uiState.totalInputTokens + uiState.totalOutputTokens
-                        if (totalTokens > 0 || uiState.totalCost > 0) {
-                            val parts = mutableListOf<String>()
-                            if (totalTokens > 0) {
-                                parts.add(stringResource(R.string.chat_tokens_summary, formatTokenCount(totalTokens)))
-                            }
-                            if (uiState.totalCost > 0) {
-                                parts.add(stringResource(R.string.chat_cost_format, String.format("%.4f", uiState.totalCost)))
-                            }
-                            if (parts.isNotEmpty()) {
-                                Text(
-                                    text = parts.joinToString(" · "),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                                )
+            ChatTopAppBar(
+                uiState = uiState,
+                onNavigateBack = onNavigateBack,
+                onOpenTerminal = { isTerminalMode = true },
+                onAbort = { viewModel.abortSession() },
+                onOpenInWebView = onOpenInWebView,
+                onNewSession = {
+                    viewModel.createNewSession { session ->
+                        if (session != null) {
+                            onNavigateToSession(session.id)
+                        } else {
+                            coroutineScope.launch {
+                                snackbarHostState.showSnackbar(context.getString(R.string.chat_session_create_failed))
                             }
                         }
                     }
                 },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
+                onForkSession = {
+                    viewModel.forkSession { session ->
+                        if (session != null) {
+                            onNavigateToSession(session.id)
+                        } else {
+                            coroutineScope.launch {
+                                snackbarHostState.showSnackbar(context.getString(R.string.chat_fork_failed))
+                            }
+                        }
                     }
                 },
-                actions = {
-                    if (uiState.sessionStatus is SessionStatus.Busy) {
-                        IconButton(onClick = { viewModel.abortSession() }) {
-                            Icon(
-                                Icons.Default.Stop,
-                                contentDescription = stringResource(R.string.chat_stop),
-                                tint = MaterialTheme.colorScheme.error
+                onCompactSession = {
+                    viewModel.compactSession { ok ->
+                        coroutineScope.launch {
+                            snackbarHostState.showSnackbar(
+                                if (ok) context.getString(R.string.chat_session_compacted) else context.getString(R.string.chat_session_compact_failed)
                             )
                         }
                     }
-                    IconButton(onClick = { isTerminalMode = true }) {
-                        Icon(
-                            imageVector = Icons.Default.Terminal,
-                            contentDescription = stringResource(R.string.tool_terminal)
-                        )
-                    }
-                    Box {
-                        val isAmoled = isAmoledTheme()
-                        IconButton(onClick = { showMenu = true }) {
-                            Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.more_options))
+                },
+                onReview = {
+                    viewModel.executeCommand("review") { ok ->
+                        coroutineScope.launch {
+                            snackbarHostState.showSnackbar(
+                                if (ok) context.getString(R.string.chat_command_executed, "review") else context.getString(R.string.chat_command_failed, "review")
+                            )
                         }
-                        DropdownMenu(
-                            expanded = showMenu,
-                            onDismissRequest = { showMenu = false },
-                            containerColor = if (isAmoled) Color.Black else MaterialTheme.colorScheme.surface,
-                            border = if (isAmoled) BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.65f)) else null
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.menu_open_in_web)) },
-                                onClick = {
-                                    showMenu = false
-                                    onOpenInWebView()
-                                },
-                                leadingIcon = {
-                                    Icon(Icons.Default.Language, contentDescription = null)
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.menu_new_session)) },
-                                onClick = {
-                                    showMenu = false
-                                    viewModel.createNewSession { session ->
-                                        if (session != null) {
-                                            onNavigateToSession(session.id)
-                                        } else {
-                                            coroutineScope.launch {
-                                                snackbarHostState.showSnackbar(context.getString(R.string.chat_session_create_failed))
-                                            }
-                                        }
-                                    }
-                                },
-                                leadingIcon = {
-                                    Icon(Icons.Default.Add, contentDescription = null)
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.menu_fork_session)) },
-                                onClick = {
-                                    showMenu = false
-                                    viewModel.forkSession { session ->
-                                        if (session != null) {
-                                            onNavigateToSession(session.id)
-                                        } else {
-                                            coroutineScope.launch {
-                                                snackbarHostState.showSnackbar(context.getString(R.string.chat_fork_failed))
-                                            }
-                                        }
-                                    }
-                                },
-                                leadingIcon = {
-                                    Icon(Icons.Default.CopyAll, contentDescription = null)
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.menu_compact_session)) },
-                                onClick = {
-                                    showMenu = false
-                                    viewModel.compactSession { ok ->
-                                        coroutineScope.launch {
-                                            snackbarHostState.showSnackbar(
-                                                if (ok) context.getString(R.string.chat_session_compacted) else context.getString(R.string.chat_session_compact_failed)
-                                            )
-                                        }
-                                    }
-                                },
-                                leadingIcon = {
-                                    Icon(Icons.Default.Compress, contentDescription = null)
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.menu_review_changes)) },
-                                onClick = {
-                                    showMenu = false
-                                    viewModel.executeCommand("review") { ok ->
-                                        coroutineScope.launch {
-                                            snackbarHostState.showSnackbar(
-                                                if (ok) context.getString(R.string.chat_command_executed, "review") else context.getString(R.string.chat_command_failed, "review")
-                                            )
-                                        }
-                                    }
-                                },
-                                leadingIcon = {
-                                    Icon(Icons.Default.RateReview, contentDescription = null)
-                                },
-                            )
-                            // Show Share or Unshare depending on current share status
-                            if (uiState.shareUrl != null) {
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.cmd_unshare)) },
-                                    onClick = {
-                                        showMenu = false
-                                        viewModel.unshareSession { ok ->
-                                            coroutineScope.launch {
-                                                snackbarHostState.showSnackbar(
-                                                    if (ok) context.getString(R.string.chat_session_unshared) else context.getString(R.string.chat_session_unshare_failed)
-                                                )
-                                            }
-                                        }
-                                    },
-                                    leadingIcon = {
-                                        Icon(Icons.Default.LinkOff, contentDescription = null)
-                                    }
-                                )
+                    }
+                },
+                onShare = {
+                    viewModel.shareSession { url ->
+                        coroutineScope.launch {
+                            if (url != null) {
+                                clipboardManager.setText(AnnotatedString(url))
+                                snackbarHostState.showSnackbar(context.getString(R.string.chat_share_url_copied))
                             } else {
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.menu_share_session)) },
-                                    onClick = {
-                                        showMenu = false
-                                        viewModel.shareSession { url ->
-                                            coroutineScope.launch {
-                                                if (url != null) {
-                                                    clipboardManager.setText(androidx.compose.ui.text.AnnotatedString(url))
-                                                    snackbarHostState.showSnackbar(context.getString(R.string.chat_share_url_copied))
-                                                } else {
-                                                    snackbarHostState.showSnackbar(context.getString(R.string.chat_share_failed))
-                                                }
-                                            }
-                                        }
-                                    },
-                                    leadingIcon = {
-                                        Icon(Icons.Default.Share, contentDescription = null)
-                                    }
-                                )
+                                snackbarHostState.showSnackbar(context.getString(R.string.chat_share_failed))
                             }
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.menu_rename_session)) },
-                                onClick = {
-                                    showMenu = false
-                                    showRenameDialog = true
-                                },
-                                leadingIcon = {
-                                    Icon(Icons.Default.Edit, contentDescription = null)
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.menu_export_session)) },
-                                onClick = {
-                                    showMenu = false
-                                    val slug = uiState.sessionTitle
-                                        .take(30)
-                                        .replace(Regex("[^a-zA-Z0-9_-]"), "_")
-                                        .ifBlank { "session" }
-                                    exportLauncher.launch("$slug.json")
-                                },
-                                leadingIcon = {
-                                    Icon(Icons.Default.FileDownload, contentDescription = null)
-                                }
+                        }
+                    }
+                },
+                onUnshare = {
+                    viewModel.unshareSession { ok ->
+                        coroutineScope.launch {
+                            snackbarHostState.showSnackbar(
+                                if (ok) context.getString(R.string.chat_session_unshared) else context.getString(R.string.chat_session_unshare_failed)
                             )
                         }
                     }
+                },
+                onRename = { showRenameDialog = true },
+                onExport = {
+                    val slug = uiState.sessionTitle
+                        .take(30)
+                        .replace(Regex("[^a-zA-Z0-9_-]"), "_")
+                        .ifBlank { "session" }
+                    exportLauncher.launch("$slug.json")
                 }
             )
             }
