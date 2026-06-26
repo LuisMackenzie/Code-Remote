@@ -1,4 +1,4 @@
-# OC Remote
+# Code Remote
 
 Android client for [OpenCode](https://github.com/anomalyco/opencode) servers with a native UI and broad feature coverage.
 
