@@ -9,6 +9,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
@@ -172,13 +173,6 @@ private fun MarkdownContent(
 
     val colors = markdownColor(
         text = textColor,
-        codeText = codeBlockFg,
-        inlineCodeText = inlineCodeFg,
-        linkText = when {
-            isAmoled -> MaterialTheme.colorScheme.primary
-            isUser -> MaterialTheme.colorScheme.onPrimaryContainer
-            else -> MaterialTheme.colorScheme.primary
-        },
         codeBackground = codeBlockBg,
         inlineCodeBackground = Color.Transparent,
         dividerColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
@@ -227,9 +221,15 @@ private fun MarkdownContent(
         ordered = bodyStyle,
         bullet = bodyStyle,
         list = bodyStyle,
-        link = bodyStyle.copy(
-            color = MaterialTheme.colorScheme.primary,
-            fontWeight = FontWeight.Medium
+        textLink = TextLinkStyles(
+            style = bodyStyle.copy(
+                color = when {
+                    isAmoled -> MaterialTheme.colorScheme.primary
+                    isUser -> MaterialTheme.colorScheme.onPrimaryContainer
+                    else -> MaterialTheme.colorScheme.primary
+                },
+                fontWeight = FontWeight.Medium
+            ).toSpanStyle()
         )
     )
 

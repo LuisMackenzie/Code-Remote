@@ -125,7 +125,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
 
     // Markdown Rendering (mikepenz/multiplatform-markdown-renderer)
-    val markdownRendererVersion = "0.28.0"
+    val markdownRendererVersion = "0.41.0"
     implementation("com.mikepenz:multiplatform-markdown-renderer:$markdownRendererVersion")
     implementation("com.mikepenz:multiplatform-markdown-renderer-m3:$markdownRendererVersion")
     implementation("com.mikepenz:multiplatform-markdown-renderer-coil2:$markdownRendererVersion")
