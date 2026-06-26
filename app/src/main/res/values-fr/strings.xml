@@ -222,7 +222,7 @@
     <string name="chat_message_undo_failed">Message annulé</string>
     <string name="chat_message_redone">Échec de l’annulation</string>
     <string name="chat_message_redo_failed">Message refait</string>
-    <string name="chat_command_executed">Échec de la restauration</string>
+    <string name="chat_command_executed">/%1$s exécuté</string>
     <string name="chat_command_failed">/%1$s exécuté</string>
     <string name="chat_message_reverted">Échec de l’exécution de /%1$s</string>
     <string name="chat_message_revert_failed">Message annulé</string>
@@ -434,7 +434,9 @@
     <string name="settings_compress_images_max_side_value">%1$d px</string>
     <string name="settings_compress_images_quality">Qualité WebP</string>
     <string name="settings_compress_images_quality_value">%1$d%%</string>
-    <string name="chat_images_optimized_summary">Redimensionner les captures d’écran volumineuses et convertir PNG/JPEG en WebP avant l’envoi pour réduire l’utilisation des tokens</string>
+    <string name="chat_images_optimized_summary">Images optimisées (%1$d)
+Taille : %2$s -&gt; %3$s
+Tokens : ~%4$d -&gt; ~%5$d</string>
     <string name="settings_compress_images_max_side_keep_original">Conserver la résolution d’origine</string>
     <string name="home_local_allow_lan_access">Autoriser l\'accès LAN</string>
     <string name="home_local_allow_lan_access_desc">Lier le serveur local à 0.0.0.0 pour les autres appareils de votre réseau</string>

@@ -41,7 +41,6 @@ import androidx.compose.ui.zIndex
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.BackHandler
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.hilt.navigation.compose.hiltViewModel
 import dev.mackenzie.coderemote.domain.model.*
 import dev.mackenzie.coderemote.data.api.PromptPart
 import dev.mackenzie.coderemote.MainActivity
@@ -55,6 +54,7 @@ import androidx.compose.ui.platform.LocalResources
 import dev.mackenzie.coderemote.BuildConfig
 import dev.mackenzie.coderemote.R
 import androidx.compose.ui.res.stringResource
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import dev.mackenzie.coderemote.ui.components.PulsingDotsIndicator
 import dev.mackenzie.coderemote.ui.screens.chat.messages.ChatMessageBubble
 import dev.mackenzie.coderemote.ui.screens.chat.messages.CompactionTriggerMessage
@@ -568,7 +568,7 @@ fun ChatScreen(
             val totalTokensBefore = optimizedComparisons.sumOf { it.originalEstimatedTokens }
             val totalTokensAfter = optimizedComparisons.sumOf { it.optimizedEstimatedTokens }
             snackbarHostState.showSnackbar(
-                context.getString(
+                resources.getString(
                     R.string.chat_images_optimized_summary,
                     optimizedComparisons.size,
                     formatFileSize(totalOriginal),
@@ -1158,7 +1158,7 @@ fun ChatScreen(
                                                                         viewModel.reconnectTerminalTab(tab.id) { ok ->
                                                                             if (!ok) {
                                                                                 coroutineScope.launch {
-                                                                                    snackbarHostState.showSnackbar(context.getString(R.string.chat_terminal_connect_failed))
+                                                                                    snackbarHostState.showSnackbar(resources.getString(R.string.chat_terminal_connect_failed))
                                                                                 }
                                                                             }
                                                                         }
@@ -1417,7 +1417,8 @@ fun ChatScreen(
                                         viewModel.revertMessage(chatMessage.message.id) { ok ->
                                             coroutineScope.launch {
                                                 snackbarHostState.showSnackbar(
-                                                    if (ok) context.getString(R.string.chat_message_reverted) else context.getString(R.string.chat_message_revert_failed)
+                                                    if (ok) resources.getString(R.string.chat_message_reverted)
+                                                    else resources.getString(R.string.chat_message_revert_failed)
                                                 )
                                             }
                                         }
