@@ -16,9 +16,9 @@ android {
     defaultConfig {
         applicationId = "dev.mackenzie.coderemote"
         minSdk = 26
-        targetSdk = 34
+        targetSdk = 37
         versionCode = 20
-        versionName = "1.6.7"
+        versionName = "1.6.8"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
