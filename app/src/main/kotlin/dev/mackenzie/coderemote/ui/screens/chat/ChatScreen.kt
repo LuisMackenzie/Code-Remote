@@ -51,6 +51,7 @@ import android.content.Intent
 import android.media.AudioManager
 import android.os.SystemClock
 import android.util.Log
+import androidx.compose.ui.platform.LocalResources
 import dev.mackenzie.coderemote.BuildConfig
 import dev.mackenzie.coderemote.R
 import androidx.compose.ui.res.stringResource
@@ -119,6 +120,7 @@ fun ChatScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
+    val resources = LocalResources.current
     val isAmoled = isAmoledTheme()
     val keyboardController = LocalSoftwareKeyboardController.current
     val clipboardManager = androidx.compose.ui.platform.LocalClipboardManager.current
@@ -176,7 +178,7 @@ fun ChatScreen(
             viewModel.openTerminalSession { ok ->
                 if (!ok) {
                     coroutineScope.launch {
-                        snackbarHostState.showSnackbar(context.getString(R.string.chat_terminal_connect_failed))
+                        snackbarHostState.showSnackbar(resources.getString(R.string.chat_terminal_connect_failed))
                     }
                     isTerminalMode = false
                 }
@@ -455,7 +457,7 @@ fun ChatScreen(
                 val totalTokensBefore = optimizedComparisons.sumOf { it.originalEstimatedTokens }
                 val totalTokensAfter = optimizedComparisons.sumOf { it.optimizedEstimatedTokens }
                 snackbarHostState.showSnackbar(
-                    context.getString(
+                    resources.getString(
                         R.string.chat_images_optimized_summary,
                         optimizedComparisons.size,
                         formatFileSize(totalOriginal),
@@ -464,6 +466,19 @@ fun ChatScreen(
                         totalTokensAfter
                     )
                 )
+
+                /*snackbarHostState.showSnackbar(
+                    String.format(
+                        R.string.chat_images_optimized_summary,
+                        listOf(
+                            optimizedComparisons.size,
+                            formatFileSize(totalOriginal),
+                            formatFileSize(totalOptimized),
+                            totalTokensBefore,
+                            totalTokensAfter
+                        )
+                    )
+                )*/
             }
         }
     }
@@ -477,9 +492,9 @@ fun ChatScreen(
             viewModel.exportSession(context, uri) { success ->
                 coroutineScope.launch {
                     if (success) {
-                        snackbarHostState.showSnackbar(context.getString(R.string.chat_session_exported))
+                        snackbarHostState.showSnackbar(resources.getString(R.string.chat_session_exported))
                     } else {
-                        snackbarHostState.showSnackbar(context.getString(R.string.chat_session_export_failed))
+                        snackbarHostState.showSnackbar(resources.getString(R.string.chat_session_export_failed))
                     }
                 }
             }
@@ -499,9 +514,9 @@ fun ChatScreen(
                 context.contentResolver.openOutputStream(uri)?.use { it.write(request.bytes) }
                     ?: error("Unable to open output stream")
             }.onSuccess {
-                snackbarHostState.showSnackbar(context.getString(R.string.chat_image_saved))
+                snackbarHostState.showSnackbar(resources.getString(R.string.chat_image_saved))
             }.onFailure {
-                snackbarHostState.showSnackbar(context.getString(R.string.chat_image_save_failed))
+                snackbarHostState.showSnackbar(resources.getString(R.string.chat_image_save_failed))
             }
         }
     }
@@ -685,7 +700,7 @@ fun ChatScreen(
                             onNavigateToSession(session.id)
                         } else {
                             coroutineScope.launch {
-                                snackbarHostState.showSnackbar(context.getString(R.string.chat_session_create_failed))
+                                snackbarHostState.showSnackbar(resources.getString(R.string.chat_session_create_failed))
                             }
                         }
                     }
@@ -696,7 +711,7 @@ fun ChatScreen(
                             onNavigateToSession(session.id)
                         } else {
                             coroutineScope.launch {
-                                snackbarHostState.showSnackbar(context.getString(R.string.chat_fork_failed))
+                                snackbarHostState.showSnackbar(resources.getString(R.string.chat_fork_failed))
                             }
                         }
                     }
@@ -705,7 +720,8 @@ fun ChatScreen(
                     viewModel.compactSession { ok ->
                         coroutineScope.launch {
                             snackbarHostState.showSnackbar(
-                                if (ok) context.getString(R.string.chat_session_compacted) else context.getString(R.string.chat_session_compact_failed)
+                                if (ok) resources.getString(R.string.chat_session_compacted)
+                                else resources.getString(R.string.chat_session_compact_failed)
                             )
                         }
                     }
@@ -714,7 +730,8 @@ fun ChatScreen(
                     viewModel.executeCommand("review") { ok ->
                         coroutineScope.launch {
                             snackbarHostState.showSnackbar(
-                                if (ok) context.getString(R.string.chat_command_executed, "review") else context.getString(R.string.chat_command_failed, "review")
+                                if (ok) resources.getString(R.string.chat_command_executed, "review")
+                                else resources.getString(R.string.chat_command_failed, "review")
                             )
                         }
                     }
@@ -724,9 +741,9 @@ fun ChatScreen(
                         coroutineScope.launch {
                             if (url != null) {
                                 clipboardManager.setText(AnnotatedString(url))
-                                snackbarHostState.showSnackbar(context.getString(R.string.chat_share_url_copied))
+                                snackbarHostState.showSnackbar(resources.getString(R.string.chat_share_url_copied))
                             } else {
-                                snackbarHostState.showSnackbar(context.getString(R.string.chat_share_failed))
+                                snackbarHostState.showSnackbar(resources.getString(R.string.chat_share_failed))
                             }
                         }
                     }
@@ -735,7 +752,8 @@ fun ChatScreen(
                     viewModel.unshareSession { ok ->
                         coroutineScope.launch {
                             snackbarHostState.showSnackbar(
-                                if (ok) context.getString(R.string.chat_session_unshared) else context.getString(R.string.chat_session_unshare_failed)
+                                if (ok) resources.getString(R.string.chat_session_unshared)
+                                else resources.getString(R.string.chat_session_unshare_failed)
                             )
                         }
                     }
@@ -816,20 +834,20 @@ fun ChatScreen(
                         if (shellCommand != null) {
                             if (shellCommand.isBlank()) {
                                 coroutineScope.launch {
-                                    snackbarHostState.showSnackbar(context.getString(R.string.chat_shell_empty))
+                                    snackbarHostState.showSnackbar(resources.getString(R.string.chat_shell_empty))
                                 }
                                 return@doSend
                             }
                             if (attachments.isNotEmpty()) {
                                 coroutineScope.launch {
-                                    snackbarHostState.showSnackbar(context.getString(R.string.chat_shell_attachments_unsupported))
+                                    snackbarHostState.showSnackbar(resources.getString(R.string.chat_shell_attachments_unsupported))
                                 }
                                 return@doSend
                             }
                             viewModel.runShellCommand(shellCommand) { ok ->
                                 if (!ok) {
                                     coroutineScope.launch {
-                                        snackbarHostState.showSnackbar(context.getString(R.string.chat_shell_failed))
+                                        snackbarHostState.showSnackbar(resources.getString(R.string.chat_shell_failed))
                                     }
                                 }
                             }
@@ -928,7 +946,7 @@ fun ChatScreen(
                                     onNavigateToSession(session.id)
                                 } else {
                                     coroutineScope.launch {
-                                        snackbarHostState.showSnackbar(context.getString(R.string.chat_session_create_failed))
+                                        snackbarHostState.showSnackbar(resources.getString(R.string.chat_session_create_failed))
                                     }
                                 }
                             }
@@ -937,7 +955,8 @@ fun ChatScreen(
                             viewModel.compactSession { ok ->
                                 coroutineScope.launch {
                                     snackbarHostState.showSnackbar(
-                                        if (ok) context.getString(R.string.chat_session_compacted) else context.getString(R.string.chat_session_compact_failed)
+                                        if (ok) resources.getString(R.string.chat_session_compacted)
+                                        else resources.getString(R.string.chat_session_compact_failed)
                                     )
                                 }
                             }
@@ -948,7 +967,7 @@ fun ChatScreen(
                                     onNavigateToSession(session.id)
                                 } else {
                                     coroutineScope.launch {
-                                        snackbarHostState.showSnackbar(context.getString(R.string.chat_fork_failed))
+                                        snackbarHostState.showSnackbar(resources.getString(R.string.chat_fork_failed))
                                     }
                                 }
                             }
@@ -958,9 +977,9 @@ fun ChatScreen(
                                 coroutineScope.launch {
                                     if (url != null) {
                                         clipboardManager.setText(androidx.compose.ui.text.AnnotatedString(url))
-                                        snackbarHostState.showSnackbar(context.getString(R.string.chat_share_url_copied))
+                                        snackbarHostState.showSnackbar(resources.getString(R.string.chat_share_url_copied))
                                     } else {
-                                        snackbarHostState.showSnackbar(context.getString(R.string.chat_share_failed))
+                                        snackbarHostState.showSnackbar(resources.getString(R.string.chat_share_failed))
                                     }
                                 }
                             }
@@ -969,7 +988,8 @@ fun ChatScreen(
                             viewModel.unshareSession { ok ->
                                 coroutineScope.launch {
                                     snackbarHostState.showSnackbar(
-                                        if (ok) context.getString(R.string.chat_session_unshared) else context.getString(R.string.chat_session_unshare_failed)
+                                        if (ok) resources.getString(R.string.chat_session_unshared)
+                                        else resources.getString(R.string.chat_session_unshare_failed)
                                     )
                                 }
                             }
@@ -978,7 +998,8 @@ fun ChatScreen(
                             viewModel.undoMessage { ok ->
                                 coroutineScope.launch {
                                     snackbarHostState.showSnackbar(
-                                        if (ok) context.getString(R.string.chat_message_undone) else context.getString(R.string.chat_message_undo_failed)
+                                        if (ok) resources.getString(R.string.chat_message_undone)
+                                        else resources.getString(R.string.chat_message_undo_failed)
                                     )
                                 }
                             }
@@ -987,7 +1008,8 @@ fun ChatScreen(
                             viewModel.redoMessage { ok ->
                                 coroutineScope.launch {
                                     snackbarHostState.showSnackbar(
-                                        if (ok) context.getString(R.string.chat_message_redone) else context.getString(R.string.chat_message_redo_failed)
+                                        if (ok) resources.getString(R.string.chat_message_redone)
+                                        else resources.getString(R.string.chat_message_redo_failed)
                                     )
                                 }
                             }
@@ -1002,7 +1024,8 @@ fun ChatScreen(
                             viewModel.executeCommand("review") { ok ->
                                 coroutineScope.launch {
                                     snackbarHostState.showSnackbar(
-                                        if (ok) context.getString(R.string.chat_command_executed, "review") else context.getString(R.string.chat_command_failed, "review")
+                                        if (ok) resources.getString(R.string.chat_command_executed, "review")
+                                        else resources.getString(R.string.chat_command_failed, "review")
                                     )
                                 }
                             }
@@ -1012,7 +1035,8 @@ fun ChatScreen(
                             viewModel.executeCommand(cmd.name) { ok ->
                                 coroutineScope.launch {
                                     snackbarHostState.showSnackbar(
-                                        if (ok) context.getString(R.string.chat_command_executed, cmd.name) else context.getString(R.string.chat_command_failed, cmd.name)
+                                        if (ok) resources.getString(R.string.chat_command_executed, cmd.name)
+                                        else resources.getString(R.string.chat_command_failed, cmd.name)
                                     )
                                 }
                             }
@@ -1201,7 +1225,7 @@ fun ChatScreen(
                                                 viewModel.createTerminalTab { ok ->
                                                     if (!ok) {
                                                         coroutineScope.launch {
-                                                            snackbarHostState.showSnackbar(context.getString(R.string.chat_terminal_connect_failed))
+                                                            snackbarHostState.showSnackbar(resources.getString(R.string.chat_terminal_connect_failed))
                                                         }
                                                     }
                                                 }
@@ -1412,7 +1436,8 @@ fun ChatScreen(
                                         viewModel.revertMessage(chatMessage.message.id, revertText) { ok ->
                                             coroutineScope.launch {
                                                 snackbarHostState.showSnackbar(
-                                                    if (ok) context.getString(R.string.chat_message_reverted) else context.getString(R.string.chat_message_revert_failed)
+                                                    if (ok) resources.getString(R.string.chat_message_reverted)
+                                                    else resources.getString(R.string.chat_message_revert_failed)
                                                 )
                                             }
                                         }
@@ -1427,7 +1452,7 @@ fun ChatScreen(
                                             androidx.compose.ui.text.AnnotatedString(text)
                                         )
                                         coroutineScope.launch {
-                                            snackbarHostState.showSnackbar(context.getString(R.string.chat_copied_clipboard))
+                                            snackbarHostState.showSnackbar(resources.getString(R.string.chat_copied_clipboard))
                                         }
                                     }
                                 }
@@ -1441,7 +1466,8 @@ fun ChatScreen(
                                     viewModel.redoMessage { ok ->
                                         coroutineScope.launch {
                                             snackbarHostState.showSnackbar(
-                                                if (ok) context.getString(R.string.chat_messages_restored) else context.getString(R.string.chat_message_redo_failed)
+                                                if (ok) resources.getString(R.string.chat_messages_restored)
+                                                else resources.getString(R.string.chat_message_redo_failed)
                                             )
                                         }
                                     }
@@ -1550,7 +1576,8 @@ fun ChatScreen(
                         viewModel.renameSession(renameText) { ok ->
                             coroutineScope.launch {
                                 snackbarHostState.showSnackbar(
-                                    if (ok) context.getString(R.string.chat_session_renamed) else context.getString(R.string.chat_session_rename_failed)
+                                    if (ok) resources.getString(R.string.chat_session_renamed)
+                                    else resources.getString(R.string.chat_session_rename_failed)
                                 )
                             }
                         }
