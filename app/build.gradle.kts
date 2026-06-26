@@ -109,7 +109,7 @@ dependencies {
     compileOnly("com.google.errorprone:error_prone_annotations:2.50.0")
 
     // Ktor Client (OkHttp engine for proper SSE streaming support)
-    val ktorVersion = "2.3.11"
+    val ktorVersion = "3.5.0"
     implementation("io.ktor:ktor-client-core:$ktorVersion")
     implementation("io.ktor:ktor-client-okhttp:$ktorVersion")
     implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")

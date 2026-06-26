@@ -56,9 +56,9 @@ class KtorSseClient @Inject constructor(
             directory?.let { header("x-opencode-directory", it) }
 
             timeout {
-                requestTimeoutMillis = HttpTimeout.INFINITE_TIMEOUT_MS
+                requestTimeoutMillis = HttpTimeoutConfig.INFINITE_TIMEOUT_MS
                 connectTimeoutMillis = 10_000
-                socketTimeoutMillis = HttpTimeout.INFINITE_TIMEOUT_MS
+                socketTimeoutMillis = HttpTimeoutConfig.INFINITE_TIMEOUT_MS
             }
         }
 
