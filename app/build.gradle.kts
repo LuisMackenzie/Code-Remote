@@ -3,7 +3,6 @@ import java.util.Properties
 
 plugins {
     id("com.android.application")
-    id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.dagger.hilt.android")
     id("org.jetbrains.kotlin.plugin.serialization")
@@ -12,7 +11,7 @@ plugins {
 
 android {
     namespace = "dev.mackenzie.coderemote"
-    compileSdk = 34
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "dev.mackenzie.coderemote"
@@ -47,7 +46,7 @@ android {
     buildTypes {
         debug {
             applicationIdSuffix = ".debug"
-            manifestPlaceholders["appLabel"] = "OC Remote Dev"
+            manifestPlaceholders["appLabel"] = "Code Remote Dev"
         }
         release {
             manifestPlaceholders["appLabel"] = "@string/app_name"
@@ -63,10 +62,6 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
-    }
-
-    kotlinOptions {
-        jvmTarget = "17"
     }
 
     buildFeatures {
@@ -94,7 +89,7 @@ dependencies {
     implementation("androidx.activity:activity-compose:1.9.1")
 
     // Compose
-    val composeBom = platform("androidx.compose:compose-bom:2024.12.01")
+    val composeBom = platform("androidx.compose:compose-bom:2026.06.00")
     implementation(composeBom)
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
@@ -109,8 +104,9 @@ dependencies {
     implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
 
     // Hilt DI
-    implementation("com.google.dagger:hilt-android:2.51")
-    ksp("com.google.dagger:hilt-android-compiler:2.51")
+    implementation("com.google.dagger:hilt-android:2.60")
+    ksp("com.google.dagger:hilt-android-compiler:2.60")
+    compileOnly("com.google.errorprone:error_prone_annotations:2.50.0")
 
     // Ktor Client (OkHttp engine for proper SSE streaming support)
     val ktorVersion = "2.3.11"
