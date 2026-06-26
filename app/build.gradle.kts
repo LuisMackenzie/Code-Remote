@@ -12,7 +12,7 @@ plugins {
 
 android {
     namespace = "dev.mackenzie.coderemote"
-    compileSdk = 34
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "dev.mackenzie.coderemote"
